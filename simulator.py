@@ -113,10 +113,10 @@ class Simulator():
         #      self.currentData[key] = float(current_data[index])
 
         #To enter rudder angle and sheet percentage manually
-        rudderAngle = input("Enter rudder angle: ")
-        self.currentData['rudderAngle'] = rudderAngle
-        sheetPercentage = input("Enter sheet percentage: ")
-        self.currentData['sheetPercentage'] = sheetPercentage
+        # rudderAngle = input("Enter rudder angle: ")
+        # self.currentData['rudderAngle'] = rudderAngle
+        # sheetPercentage = input("Enter sheet percentage: ")
+        # self.currentData['sheetPercentage'] = sheetPercentage
 
         #To read rudder angle and sheet percentage from file
         input_file = open('dummy_boat_inputs.txt','r')
