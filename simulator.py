@@ -22,7 +22,7 @@ MCU_DIRECTORY = os.path.join(os.path.pardir, "mcu", "build")
 # otherwise, use "mcuOutput"
 LINK_FILE = os.path.join(MCU_DIRECTORY, "simuLink")
 ROUTE_FILE = os.path.join(MCU_DIRECTORY, "routeLink")
-
+DUMMY_BOAT_INPUTS_FILE = os.path.join(MCU_DIRECTORY,"dummy_boat_inputs.txt")
 
 class Simulator():
     # degrees of wind change
@@ -120,8 +120,9 @@ class Simulator():
 
         #To read rudder angle and sheet percentage from file
         input_file = open('dummy_boat_inputs.txt','r')
-        self.currentData['rudderAngle'] = input_file.readline(1)
-        self.currentData['sheetPercentage'] = input_file.readline(3)
+
+        self.currentData['rudderAngle'] =float(input_file.readline())
+        self.currentData['sheetPercentage'] = float(input_file.readline())
 
     def update_old_data(self):
         self.oldData = self.currentData.copy()
@@ -144,7 +145,7 @@ class Simulator():
 
     def adjust_hog(self):
         # Make functional, i.e. go to desired rudder angle immediately
-        hogChange = self.boatVector.length() * math.sin(self.currentData['rudderAngle']* math.pi / 180.0) \
+        hogChange = self.currentData['sog'] * math.sin(abs(self.currentData['rudderAngle'])* math.pi / 180.0) \
                     / self.L_CENTERBOARD_TO_RUDDER * self.TIME_SCALE
         self.currentData['hog'] += hogChange
         self.currentData['hog'] = standardcalc.bound_to_180(self.currentData['hog'])
@@ -162,11 +163,15 @@ class Simulator():
         # v_b = w_a*f(phi_aw)*beta where w_a is the apparent wind speed, f(phi_aw) is the norm. BSPD and beta is
         # the control parameter setting (e.g. sheet setting)
 
-        self.currentData['sog'] = standardcalc.calculate_sog_BSPD( self.currentData['awa'], \
-                                   self.currentData['windSpeed']) * self.currentData['sheetPercentage'] / 100
+        self.currentData['sog'] = standardcalc.calculate_sog_BSPD( self.currentData['awa'],
+                                   self.currentData['windSpeed']) * self.currentData['sheetPercentage'] / 100.0
+
         # multiplier = standardcalc.calculateErrorCoefficient(self.currentData['awa'],
         # self.currentData['sheetPercentage'])
-        # max_sog = standardcalc.calculate_max_sog(self.currentData['awa'], self.currentData['windSpeed'])
+        max_sog = standardcalc.calculate_max_sog(self.currentData['awa'], self.currentData['windSpeed'])
+
+        if self.currentData['sog'] > max_sog:
+            self.currentData['sog'] = max_sog
         #
         # tempVector = standardcalc.Vector2D.create_from_angle(self.currentData['cog'], self.currentData['sog']) \
         #                   - self.currentFlowVector
@@ -178,9 +183,10 @@ class Simulator():
         # # Rectify if negative
         # self.currentData['sog'] = abs(self.currentData['sog'])
         #
+
         if self.verbose:
             print "IDEAL SHEET SETTINGS: " + str(standardcalc.calculate_ideal_sheet_percentage(self.currentData['awa']))
-            print "IDEAL SOG: " + str(self.currentData['sog'])
+            print "MAX SOG: " + str(max_sog)
             print "NEW SOG:  " + str(self.currentData['sog'])
 
     def adjust_true_wind(self):

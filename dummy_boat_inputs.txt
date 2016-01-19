@@ -1,4 +1,2 @@
-#rudder angle
-30
-#sheet settings
-100
+0
+20
