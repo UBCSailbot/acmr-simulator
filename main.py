@@ -1,10 +1,23 @@
 # Main class for python simulator
 import sys
 import simulator
-
+import thread
+from drivers import interface
+import global_vars as gVars
+import static_vars as sVars
+from datetime import datetime
+from datatype import GPSCoordinate
 
 def run():
     hardware = simulator.Simulator(verbose, reset, gust, dataToUI)
+
+    gVars.simulated.add('WS')
+    gVars.simulated.add('GPS')
+    gVars.simulated.add('TCU')
+    gVars.simulated.add('SCU')
+
+    gVars.bus = interface.Interface(gVars.simulated)
+    gVars.currentData = gVars.bus.getData()
 
     while 1:
         hardware.update()
@@ -12,6 +25,11 @@ def run():
     # Example calls:
     # hardware.getAWA()
     # hardware.getWindSpeed()
+
+def getCurrentData():
+    if gVars.currentProcess == None:
+        pass
+    gVars.currentData = gVars.bus.getData()
 
 
 if __name__ == '__main__':

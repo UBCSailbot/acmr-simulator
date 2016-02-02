@@ -5,6 +5,11 @@ import os
 import math
 import sys
 import time
+from drivers import interface
+import global_vars as gVars
+import static_vars as sVars
+from datetime import datetime
+from datatype import GPSCoordinate
 
 # This will be the format of the file output
 # The file will be a space delimited file.
@@ -118,11 +123,15 @@ class Simulator():
         # sheetPercentage = input("Enter sheet percentage: ")
         # self.currentData['sheetPercentage'] = sheetPercentage
 
-        #To read rudder angle and sheet percentage from file
-        input_file = open('dummy_boat_inputs.txt','r')
+        # To read rudder angle and sheet percentage from file
+        # input_file = open('dummy_boat_inputs.txt','r')
 
-        self.currentData['rudderAngle'] =float(input_file.readline())
-        self.currentData['sheetPercentage'] = float(input_file.readline())
+        
+        self.currentData['rudderAngle'] = gVars.currentData.rudderAngle
+        self.currentData['sheetPercentage'] = gVars.currentData.propSetting
+
+        # self.currentData['rudderAngle'] = float(input_file.readline())
+        # self.currentData['sheetPercentage'] = float(input_file.readline())
 
     def update_old_data(self):
         self.oldData = self.currentData.copy()
