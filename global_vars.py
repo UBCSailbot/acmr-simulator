@@ -16,10 +16,18 @@ simulated = set()
 # functionQueue = []
 # queueParameters = []
 # boundaries = []
+
+interfaceData = None
+
 run = True
 currentProcess = None
 currentParams = None
 taskStartTime = None
 currentColumn = 0
+
+verbose = False
+reset = False
+gust = False
+dataToUI = False
 
 bus = None

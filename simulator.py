@@ -3,6 +3,7 @@ import random
 import standardcalc
 import os
 import math
+import threading
 import sys
 import time
 from drivers import interface
@@ -105,7 +106,8 @@ class Simulator():
         self.adjust_position()
 
         if self.verbose:
-            print "FINAL SOG:  " + str(self.currentData['sog'])
+            pass
+            # print "FINAL SOG:  " + str(self.currentData['sog'])
 
         self.write_data()
         if self.dataToUI:
@@ -126,9 +128,8 @@ class Simulator():
         # To read rudder angle and sheet percentage from file
         # input_file = open('dummy_boat_inputs.txt','r')
 
-        
-        self.currentData['rudderAngle'] = gVars.currentData.rudderAngle
-        self.currentData['sheetPercentage'] = gVars.currentData.propSetting
+        self.currentData['rudderAngle'] = gVars.interfaceData.rudder
+        self.currentData['sheetPercentage'] = gVars.interfaceData.sheet_percent
 
         # self.currentData['rudderAngle'] = float(input_file.readline())
         # self.currentData['sheetPercentage'] = float(input_file.readline())
@@ -236,6 +237,7 @@ class Simulator():
             self.displacement)
 
     def write_data(self):
+        time.sleep(1)
         keys = ["hog", "cog", "awa", "sog", "windSpeed", "latitude", "longitude", "rudderAngle", "sheetPercentage"]
 
         # Create the space delimited lines

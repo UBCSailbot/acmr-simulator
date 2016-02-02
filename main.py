@@ -1,27 +1,22 @@
 # Main class for python simulator
 import sys
 import simulator
-import thread
 from drivers import interface
 import global_vars as gVars
+import run_threads
 import static_vars as sVars
 from datetime import datetime
 from datatype import GPSCoordinate
 
 def run():
-    hardware = simulator.Simulator(verbose, reset, gust, dataToUI)
 
-    gVars.simulated.add('WS')
-    gVars.simulated.add('GPS')
-    gVars.simulated.add('TCU')
-    gVars.simulated.add('SCU')
 
-    gVars.bus = interface.Interface(gVars.simulated)
-    gVars.currentData = gVars.bus.getData()
+    InterfaceThread = run_threads.ZMQ_Thread(2, "Interface Thread")
+    SimulatorThread = run_threads.MainSimulatorThread(1, "Simulator Thread")
 
-    while 1:
-        hardware.update()
 
+    SimulatorThread.start()
+    InterfaceThread.start()
     # Example calls:
     # hardware.getAWA()
     # hardware.getWindSpeed()
@@ -29,12 +24,12 @@ def run():
 def getCurrentData():
     if gVars.currentProcess == None:
         pass
-    gVars.currentData = gVars.bus.getData()
+    gVars.interfaceData = gVars.bus.getData()
 
 
 if __name__ == '__main__':
     try:
-        verbose = reset = gust = dataToUI = False
+        gVars.verbose = gVars.reset = gVars.gust = gVars.dataToUI = False
         for arg in sys.argv:
             if arg == "--help":
                 print "Sailing condition simulator for the UBC Sailbot Transat MCU"
@@ -46,13 +41,16 @@ if __name__ == '__main__':
                 print " -d : Send data to UI (do not use with Route Making)"
                 sys.exit()
             if arg == "-v":
-                verbose = True
+                gVars.verbose = True
             if arg == "-r":
-                reset = True
+                gVars.reset = True
             if arg == "-g":
-                gust = True
+                gVars.gust = True
             if arg == "-d":
-                dataToUI = True
+                gVars.dataToUI = True
         sys.exit(run())
+
     except KeyboardInterrupt:
         print "\n Exit - Keyboard Interrupt"
+
+

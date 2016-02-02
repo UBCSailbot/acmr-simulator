@@ -25,6 +25,8 @@ class ZMQController:
         self.data = BoatData()
 
     def read(self):
+
+
         try:
             rec_str = self.subsocket.recv(flags=zmq.NOBLOCK)
 
@@ -32,6 +34,8 @@ class ZMQController:
             received = rec_str.split()
 
             datatopic = received[0]
+
+            print "Attempting to read..." + str(datatopic)
 
             if datatopic == 'RUD':
                 if(len(received) != 2):

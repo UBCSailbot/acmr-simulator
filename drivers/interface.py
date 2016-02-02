@@ -46,12 +46,6 @@ class Interface:
     def getData(self):
         return self.data
 
-    # def getRudderAngle(self):
-    #     return self.RudderAngle
-    #
-    # def getPropSetting(self):
-    #     return self.PropSetting
-
     def __str__(self):
         return self.name + " connected to " + str(self.simulated)
 
@@ -69,7 +63,6 @@ class Module:
 
     def __repr__(self):
         return self.name
-
 
 
 class InvalidModuleException(Exception):
