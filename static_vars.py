@@ -11,5 +11,5 @@ Static Variables for use in the Simulator
 # SCU - Steering Controller Unit
 # WS - Wind Sensor
 # GPS - Global Positioning System
-AllModules = {'TCU': 0, 'SCU': 1, 'WS': 2, 'GPS': 3}
+AllModules = {'MC':0, 'TCU': 1, 'SCU': 2, 'WS': 3, 'GPS': 4}
 CurrentModule = 'SIM'

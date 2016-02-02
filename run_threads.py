@@ -5,14 +5,15 @@ import threading
 import global_vars as gVars
 from datatype import BoatData
 from drivers import interface
-from drivers import ZeroMQ
+from drivers import ZMQHandler
 
 
-class MainSimulatorThread (threading.Thread):
-    def __init__(self, threadID, name):
-        threading.Thread.__init__(self)
-        self.threadID = threadID
-        self.name = name
+class MainSimulatorThread ():
+    def __init__(self):
+        # threading.Thread.__init__(self)
+        # self.threadID = threadID
+        # self.name = name
+        pass
 
     def run(self):
         print "Starting " + self.name
@@ -38,7 +39,7 @@ class ZMQ_Thread (threading.Thread):
 
         gVars.bus = interface.Interface(gVars.simulated)
 
-        ZMQ = ZeroMQ.ZMQController()
+        # ZMQ = ZMQHandler.ZMQController()
 
         while 1:
             ZMQ.read()

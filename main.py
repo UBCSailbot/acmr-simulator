@@ -7,19 +7,38 @@ import run_threads
 import static_vars as sVars
 from datetime import datetime
 from datatype import GPSCoordinate
+from datatype import BoatData
+import time
 
 def run():
 
 
-    InterfaceThread = run_threads.ZMQ_Thread(2, "Interface Thread")
-    SimulatorThread = run_threads.MainSimulatorThread(1, "Simulator Thread")
+    # InterfaceThread = run_threads.ZMQ_Thread(2, "Interface Thread")
+    # SimulatorThread = run_threads.MainSimulatorThread(1, "Simulator Thread")
 
 
-    SimulatorThread.start()
-    InterfaceThread.start()
+    # SimulatorThread.start()
+    # InterfaceThread.start()
     # Example calls:
     # hardware.getAWA()
     # hardware.getWindSpeed()
+
+    print "Starting the Bus"
+
+    gVars.simulated.add('TCU')
+    gVars.simulated.add('SCU')
+    gVars.simulated.add('MC')
+
+    gVars.bus = interface.Interface(gVars.simulated)
+
+    print "Starting the Simulator"
+
+    # gVars.interfaceData = BoatData.BoatData()
+    hardware = simulator.Simulator( gVars.verbose, gVars.reset, gVars.gust, gVars.dataToUI)
+    while 1:
+        hardware.update()
+        time.sleep(hardware.TIME_SCALE)
+
 
 def getCurrentData():
     if gVars.currentProcess == None:
@@ -52,5 +71,9 @@ if __name__ == '__main__':
 
     except KeyboardInterrupt:
         print "\n Exit - Keyboard Interrupt"
+
+        gVars.bus.close()
+
+
 
 

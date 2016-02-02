@@ -128,8 +128,9 @@ class Simulator():
         # To read rudder angle and sheet percentage from file
         # input_file = open('dummy_boat_inputs.txt','r')
 
-        self.currentData['rudderAngle'] = gVars.interfaceData.rudder
-        self.currentData['sheetPercentage'] = gVars.interfaceData.sheet_percent
+        data = gVars.bus.getData()
+        self.currentData['rudderAngle'] = data.rudder
+        self.currentData['sheetPercentage'] = data.sheet_percent
 
         # self.currentData['rudderAngle'] = float(input_file.readline())
         # self.currentData['sheetPercentage'] = float(input_file.readline())
