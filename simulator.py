@@ -110,8 +110,8 @@ class Simulator():
             # print "FINAL SOG:  " + str(self.currentData['sog'])
 
         self.write_data()
-        if self.dataToUI:
-            self.send_data_to_ui()
+        # if self.dataToUI:
+        #     self.send_data_to_ui()
 
     def read_data(self):
         # keys = ["hog", "cog", "awa", "sog", "windSpeed", "latitude", "longitude", "rudderAngle", "sheetPercentage"]
@@ -254,6 +254,10 @@ class Simulator():
         header_line = header_line.rstrip()
         old_data = old_data.rstrip()
         current_data = current_data.rstrip()
+
+        gVars.bus.publish("GPS", self.currentData['latitude'], self.currentData['longitude'],
+                          self.currentData['hog'], self.currentData['sog'], self.currentData['cog'])
+        gVars.bus.publish("AW", self.currentData['windSpeed'], self.currentData['awa'])
 
         if self.verbose:
             # Debug printer

@@ -68,7 +68,7 @@ class ZMQHandler(threading.Thread):
                 self.data.awa = int(received[2])
             else:
                 # print "Invalid Topic detected"
-                print rec_str
+                # print rec_str
                 # ignore the unknown topic
                 pass
 

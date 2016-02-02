@@ -37,6 +37,8 @@ def run():
     hardware = simulator.Simulator( gVars.verbose, gVars.reset, gVars.gust, gVars.dataToUI)
     while 1:
         hardware.update()
+        print "Received: Rudder Angle = " + str(gVars.bus.getData().rudder) + " ; Prop. Setting = " \
+                  + str(gVars.bus.getData().sheet_percent)
         time.sleep(hardware.TIME_SCALE)
 
 
@@ -72,7 +74,7 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print "\n Exit - Keyboard Interrupt"
 
-        gVars.bus.close()
+    gVars.bus.close()
 
 
 

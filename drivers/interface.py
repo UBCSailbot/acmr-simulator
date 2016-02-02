@@ -56,8 +56,8 @@ class Interface:
 
     def close(self):
         if self.busIsVirtual:
-            self.zmqBus.join()
             self.zmqBus.exitFlag = 1
+            self.zmqBus.join()
 
     def __str__(self):
         return self.name + " connected to " + str(self.simulated) + " by ZeroMQ."
