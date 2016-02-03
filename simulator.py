@@ -97,8 +97,8 @@ class Simulator():
         self.update_old_data()
         if self.gust:
             self.gust_manager()
-        self.adjust_sog()
         self.adjust_hog()
+        self.adjust_sog()
         self.adjust_true_wind()
         self.adjust_current()
         self.update_vectors()
