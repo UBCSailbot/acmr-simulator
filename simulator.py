@@ -9,7 +9,7 @@ import time
 from drivers import interface
 import global_vars as gVars
 import static_vars as sVars
-from datetime import datetime
+from datatype import BoatData
 from datatype import GPSCoordinate
 
 # This will be the format of the file output
@@ -48,7 +48,7 @@ class Simulator():
     # Max rudder angle possible (angle between -45 to 45)
     MAX_RUDDER_ANGLE = 45.0
     # This affects how fast the boat reaches the ideal SOG
-    SOG_DECAY_FACTOR = (3 / CLOCK_INTERVAL)
+    SOW_DECAY_FACTOR = (3 / CLOCK_INTERVAL)
     # How likely a gust is to occur every virtual second (Higher => Less probable)
     GUST_PROBABILITY = 100
     # Actual seconds between every time data is sent to the server
@@ -65,21 +65,29 @@ class Simulator():
         # Choose Random Wind Angle between -180 and 180
         self.trueWindAngle = random.randint(-180, 180)
         self.trueWindSpeed = float(random.randint(10, 15))
+        self.windVector = standardcalc.Vector2D.zero()
+
+        self.apparentWindVector = standardcalc.Vector2D.zero()
+
         self.currentFlowAngle = random.randint(-180, 180)
         self.currentFlowSpeed = float(random.randint(1, 5))
         self.currentFlowVector = standardcalc.Vector2D.zero()
+
         self.displacement = standardcalc.Vector2D.zero()
 
-        self.windVector = standardcalc.Vector2D.zero()
         self.boatVector = standardcalc.Vector2D.zero()
-        self.apparentWindVector = standardcalc.Vector2D.zero()
         self.verbose = verbose
         self.gust = gust
         self.dataToUI = data_to_ui
+
         self.gustTimer = 0
         self.dataTimer = 0
         self.preGustTrueWindSpeed = 0
         self.preGustTrueWindAngle = 0
+
+        self.boatData = BoatData.BoatData()
+        self.oldBoatData = BoatData.BoatData()
+        self.oldBoatDataString = ""
 
         # These are initializations that make it simple to debug
         # self.trueWindAngle = 0
@@ -97,8 +105,8 @@ class Simulator():
         self.update_old_data()
         if self.gust:
             self.gust_manager()
+        self.adjust_sow()
         self.adjust_hog()
-        self.adjust_sog()
         self.adjust_true_wind()
         self.adjust_current()
         self.update_vectors()
@@ -129,14 +137,18 @@ class Simulator():
         # input_file = open('dummy_boat_inputs.txt','r')
 
         data = gVars.bus.getData()
-        self.currentData['rudderAngle'] = data.rudder
-        self.currentData['sheetPercentage'] = data.sheet_percent
+        # self.currentData['rudderAngle'] = data.rudder
+        # self.currentData['sheetPercentage'] = data.sheet_percent
+
+        self.boatData.rudder = data.rudder
+        self.boatData.rudder = data.sheet_percent
 
         # self.currentData['rudderAngle'] = float(input_file.readline())
         # self.currentData['sheetPercentage'] = float(input_file.readline())
 
     def update_old_data(self):
-        self.oldData = self.currentData.copy()
+        self.oldBoatData = self.boatData
+        self.oldBoatDataString = self.boatData.__repr__()
 
     def gust_manager(self):
         if self.gustTimer <= 0:
@@ -156,33 +168,39 @@ class Simulator():
 
     def adjust_hog(self):
         # Make functional, i.e. go to desired rudder angle immediately
-        hogChange = self.currentData['sog'] * math.sin(abs(self.currentData['rudderAngle'])* math.pi / 180.0) \
-                    / self.L_CENTERBOARD_TO_RUDDER * self.TIME_SCALE
-        self.currentData['hog'] += hogChange
-        self.currentData['hog'] = standardcalc.bound_to_180(self.currentData['hog'])
-
-        # normalized_rudder_ratio = self.currentData['rudderAngle'] / self.MAX_RUDDER_ANGLE
-        # self.currentData['hog'] += normalized_rudder_ratio * self.MAX_RUDDER_HOG_CHANGE * \
-        #                            self.currentData['sog'] * self.TIME_SCALE
+        # hogChange = self.currentData['sog'] * math.sin(self.currentData['rudderAngle']* math.pi / 180.0) \
+        #             / self.L_CENTERBOARD_TO_RUDDER * self.TIME_SCALE
+        # self.currentData['hog'] += hogChange
         # self.currentData['hog'] = standardcalc.bound_to_180(self.currentData['hog'])
 
-    def adjust_cog_and_sog_for_current(self):
-        self.currentData['cog'] = self.boatVector.angle()
-        self.currentData['sog'] = self.boatVector.length()
+        #Update HOG from rudder change
+        hogChange = self.boatData.sow * math.sin(self.boatData.rudder * math.pi / 180.0) \
+                    / self.L_CENTERBOARD_TO_RUDDER * self.TIME_SCALE
 
-    def adjust_sog(self):
+        self.boatData.hog += hogChange
+        self.boatData.hog = standardcalc.bound_to_180(self.boatData.hog)
+
+    def adjust_cog_and_sog_for_current(self):
+
+        self.boatData.cog = self.boatVector.angle()
+        self.boatData.sog = self.boatVector.length()
+
+    def adjust_sow(self):
         # v_b = w_a*f(phi_aw)*beta where w_a is the apparent wind speed, f(phi_aw) is the norm. BSPD and beta is
         # the control parameter setting (e.g. sheet setting)
+        sowChange = ( standardcalc.calculate_sog_BSPD( self.boatData.awa,
+                    self.boatData.windspeed) * self.boatData.sheet_percent / 100.0 ) - self.boatData.sow
 
-        self.currentData['sog'] = standardcalc.calculate_sog_BSPD( self.currentData['awa'],
-                                   self.currentData['windSpeed']) * self.currentData['sheetPercentage'] / 100.0
+        self.boatData.sow += ( sowChange / self.SOW_DECAY_FACTOR )
 
-        # multiplier = standardcalc.calculateErrorCoefficient(self.currentData['awa'],
-        # self.currentData['sheetPercentage'])
-        max_sog = standardcalc.calculate_max_sog(self.currentData['awa'], self.currentData['windSpeed'])
+        # self.boatData.sog = standardcalc.calculate_sog_BSPD( self.boatData.awa,
+        #                     self.boatData.windspeed) * self.boatData.sheet_percent / 100.0
 
-        if self.currentData['sog'] > max_sog:
-            self.currentData['sog'] = max_sog
+        max_sow = standardcalc.calculate_max_sog( self.boatData.awa, self.boatData.windspeed )
+
+        if self.boatData.sog > max_sow:
+            self.boatData.sog = max_sow
+
         #
         # tempVector = standardcalc.Vector2D.create_from_angle(self.currentData['cog'], self.currentData['sog']) \
         #                   - self.currentFlowVector
@@ -195,10 +213,11 @@ class Simulator():
         # self.currentData['sog'] = abs(self.currentData['sog'])
         #
 
-        if self.verbose:
-            print "IDEAL SHEET SETTINGS: " + str(standardcalc.calculate_ideal_sheet_percentage(self.currentData['awa']))
-            print "MAX SOG: " + str(max_sog)
-            print "NEW SOG:  " + str(self.currentData['sog'])
+        # 4 Feb 2016. Commented this out. Not that useful. Can uncomment later for debugging
+        # if self.verbose:
+        #     print "IDEAL SHEET SETTINGS: " + str(standardcalc.calculate_ideal_sheet_percentage(self.currentData['awa']))
+        #     print "MAX SOG: " + str(max_sog)
+        #     print "NEW SOG:  " + str(self.currentData['sog'])
 
     def adjust_true_wind(self):
         # True wind angle is allowed to fluctuate
@@ -210,6 +229,8 @@ class Simulator():
         self.trueWindAngle = standardcalc.bound_to_180(self.trueWindAngle)
         self.trueWindSpeed = abs(self.trueWindSpeed)
 
+        self.windVector = -standardcalc.Vector2D.create_from_angle(self.trueWindAngle, self.trueWindSpeed)
+
     def adjust_current(self):
         # self.currentFlowAngle += standardcalc.generate_bell_curve(self.CURRENT_ANGLE_FLUCTUATIONS * self.CLOCK_INTERVAL)
         # self.currentFlowSpeed += standardcalc.generate_bell_curve(self.CURRENT_SPEED_FLUCTUATIONS * self.CLOCK_INTERVAL)
@@ -218,61 +239,81 @@ class Simulator():
         self.currentFlowAngle = standardcalc.bound_to_180(self.currentFlowAngle)
         self.currentFlowSpeed = abs(self.currentFlowSpeed)
 
-    def update_vectors(self):
-        self.windVector = -standardcalc.Vector2D.create_from_angle(self.trueWindAngle, self.trueWindSpeed)
         self.currentFlowVector = standardcalc.Vector2D.create_from_angle(self.currentFlowAngle, self.currentFlowSpeed)
-        self.boatVector = standardcalc.Vector2D.create_from_angle(self.currentData['hog'], self.currentData['sog']) \
+
+    def update_vectors(self):
+        self.boatVector = standardcalc.Vector2D.create_from_angle(self.boatData.hog, self.boatData.sow) \
                           + self.currentFlowVector
+        # Update COG and SOG
+        self.boatData.cog = self.boatVector.angle()
+        self.boatData.sog = self.boatVector.length()
+
         self.apparentWindVector = self.windVector - self.boatVector
 
-        self.currentData['awa'] = standardcalc.bound_to_180(
+        # 4 Feb 2016
+        self.boatData.awa = standardcalc.bound_to_180(
             standardcalc.Vector2D.angle_between(self.boatVector, -self.apparentWindVector))
-        self.currentData['windSpeed'] = self.apparentWindVector.length()
+        self.boatData.windspeed = self.apparentWindVector.length()
+
 
     def adjust_position(self):
         # Vector addition
         self.displacement = self.CLOCK_INTERVAL * self.boatVector
-        self.currentData['latitude'], self.currentData['longitude'] = standardcalc.shift_coordinates(
-            self.currentData['latitude'],
-            self.currentData['longitude'],
-            self.displacement)
+
+        # self.currentData['latitude'], self.currentData['longitude'] = standardcalc.shift_coordinates(
+        #     self.currentData['latitude'],
+        #     self.currentData['longitude'],
+        #     self.displacement)
+
+        self.boatData.gps_coord.lat, self.boatData.gps_coord.long = standardcalc.shift_coordinates(
+            self.boatData.gps_coord.lat,
+            self.boatData.gps_coord.long,
+            self.displacement
+        )
 
     def write_data(self):
         time.sleep(1)
-        keys = ["hog", "cog", "awa", "sog", "windSpeed", "latitude", "longitude", "rudderAngle", "sheetPercentage"]
+        # keys = ["hog", "cog", "awa", "sog", "windSpeed", "latitude", "longitude", "rudderAngle", "sheetPercentage"]
+        #
+        # # Create the space delimited lines
+        # header_line = ""
+        # old_data = ""
+        # current_data = ""
+        #
+        # for key in keys:
+        #     header_line += key + " "
+        #     old_data += '%.8f' % self.oldData[key] + " "
+        #     current_data += '%.8f' % self.currentData[key] + " "
+        #
+        # header_line = header_line.rstrip()
+        # old_data = old_data.rstrip()
+        # current_data = current_data.rstrip()
 
-        # Create the space delimited lines
-        header_line = ""
-        old_data = ""
-        current_data = ""
+        # gVars.bus.publish("GPS", self.currentData['latitude'], self.currentData['longitude'],
+        #                   self.currentData['hog'], self.currentData['sog'], self.currentData['cog'])
+        # gVars.bus.publish("AW", self.currentData['windSpeed'], self.currentData['awa'])
 
-        for key in keys:
-            header_line += key + " "
-            old_data += '%.8f' % self.oldData[key] + " "
-            current_data += '%.8f' % self.currentData[key] + " "
-
-        header_line = header_line.rstrip()
-        old_data = old_data.rstrip()
-        current_data = current_data.rstrip()
-
-        gVars.bus.publish("GPS", self.currentData['latitude'], self.currentData['longitude'],
-                          self.currentData['hog'], self.currentData['sog'], self.currentData['cog'])
-        gVars.bus.publish("AW", self.currentData['windSpeed'], self.currentData['awa'])
+        gVars.bus.publish("GPS", self.boatData.gps_coord.lat, self.boatData.gps_coord.long,
+                          self.boatData.hog, self.boatData.sog, self.boatData.cog)
+        gVars.bus.publish("AW", self.boatData.windspeed, self.boatData.awa)
 
         if self.verbose:
             # Debug printer
             print "===================="
-            print header_line
-            print old_data
-            print current_data
+            # print header_line
+            # print old_data
+            print self.oldBoatData.__repr__()
+            print self.oldBoatDataString
 
             print "\n"
             print "TRUE WIND SPEED: " + '%.8f' % self.trueWindSpeed
             print "TRUE WIND ANGLE: " + '%.8f' % self.trueWindAngle
             print "CURRENT SPEED: " + '%.8f' % self.currentFlowSpeed
             print "CURRENT ANGLE: " + '%.8f' % self.currentFlowAngle
+
         else:
-            print current_data
+            print self.oldBoatData.__repr__()
+            print self.boatData.__repr__()
 
     def reset_data(self):
         # # Create the space delimited lines
