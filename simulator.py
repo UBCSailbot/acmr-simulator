@@ -141,7 +141,7 @@ class Simulator():
         # self.currentData['sheetPercentage'] = data.sheet_percent
 
         self.boatData.rudder = data.rudder
-        self.boatData.rudder = data.sheet_percent
+        self.boatData.sheet_percent = data.sheet_percent
 
         # self.currentData['rudderAngle'] = float(input_file.readline())
         # self.currentData['sheetPercentage'] = float(input_file.readline())
