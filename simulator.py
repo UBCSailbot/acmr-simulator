@@ -52,16 +52,16 @@ class Simulator():
     # How likely a gust is to occur every virtual second (Higher => Less probable)
     GUST_PROBABILITY = 100
     # Actual seconds between every time data is sent to the server
-    DATA_DELAY = 1
+    DATA_DELAY = 0.01
     #NEW CONSTANTS
     # This is the centerboard to rudder distance L
     L_CENTERBOARD_TO_RUDDER = 1.0
 
     def __init__(self, verbose, reset, gust, data_to_ui):
         random.seed()
-        self.currentData = {'latitude': 0, 'longitude': 0, 'hog': 0, 'cog': 0, 'awa': 0, 'sog': 0, 'windSpeed': 0,
-                            'rudderAngle': 0, 'sheetPercentage': 0}
-        self.oldData = self.currentData.copy()
+        # self.currentData = {'latitude': 0, 'longitude': 0, 'hog': 0, 'cog': 0, 'awa': 0, 'sog': 0, 'windSpeed': 0,
+        #                     'rudderAngle': 0, 'sheetPercentage': 0}
+        # self.oldData = self.currentData.copy()
         # Choose Random Wind Angle between -180 and 180
         self.trueWindAngle = random.randint(-180, 180)
         self.trueWindSpeed = float(random.randint(10, 15))
@@ -141,13 +141,15 @@ class Simulator():
         # self.currentData['sheetPercentage'] = data.sheet_percent
 
         self.boatData.rudder = data.rudder
-        self.boatData.sheet_percent = data.sheet_percent
+
+        # TODO: Revert once TCU implemented
+        self.boatData.sheet_percent = 50
+        # self.boatData.sheet_percent = data.sheet_percent
 
         # self.currentData['rudderAngle'] = float(input_file.readline())
         # self.currentData['sheetPercentage'] = float(input_file.readline())
 
     def update_old_data(self):
-        self.oldBoatData = self.boatData
         self.oldBoatDataString = self.boatData.__repr__()
 
     def gust_manager(self):
@@ -272,26 +274,7 @@ class Simulator():
         )
 
     def write_data(self):
-        time.sleep(1)
-        # keys = ["hog", "cog", "awa", "sog", "windSpeed", "latitude", "longitude", "rudderAngle", "sheetPercentage"]
-        #
-        # # Create the space delimited lines
-        # header_line = ""
-        # old_data = ""
-        # current_data = ""
-        #
-        # for key in keys:
-        #     header_line += key + " "
-        #     old_data += '%.8f' % self.oldData[key] + " "
-        #     current_data += '%.8f' % self.currentData[key] + " "
-        #
-        # header_line = header_line.rstrip()
-        # old_data = old_data.rstrip()
-        # current_data = current_data.rstrip()
-
-        # gVars.bus.publish("GPS", self.currentData['latitude'], self.currentData['longitude'],
-        #                   self.currentData['hog'], self.currentData['sog'], self.currentData['cog'])
-        # gVars.bus.publish("AW", self.currentData['windSpeed'], self.currentData['awa'])
+        time.sleep(0.1)
 
         gVars.bus.publish("GPS", self.boatData.gps_coord.lat, self.boatData.gps_coord.long,
                           self.boatData.hog, self.boatData.sog, self.boatData.cog)
@@ -302,8 +285,9 @@ class Simulator():
             print "===================="
             # print header_line
             # print old_data
-            print self.oldBoatData.__repr__()
             print self.oldBoatDataString
+            print self.boatData.__repr__()
+
 
             print "\n"
             print "TRUE WIND SPEED: " + '%.8f' % self.trueWindSpeed
@@ -312,7 +296,7 @@ class Simulator():
             print "CURRENT ANGLE: " + '%.8f' % self.currentFlowAngle
 
         else:
-            print self.oldBoatData.__repr__()
+            print self.oldBoatDataString
             print self.boatData.__repr__()
 
     def reset_data(self):
