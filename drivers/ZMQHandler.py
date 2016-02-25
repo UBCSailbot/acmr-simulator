@@ -11,7 +11,7 @@ import time
 
 class ZMQHandler(threading.Thread):
     # in seconds
-    ZMQ_DELAY = 0.1
+    ZMQ_DELAY = 0.0
 
     def __init__(self):
         super(ZMQHandler, self).__init__()

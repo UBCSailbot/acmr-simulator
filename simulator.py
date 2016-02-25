@@ -274,7 +274,7 @@ class Simulator():
         )
 
     def write_data(self):
-        time.sleep(0.1)
+
 
         gVars.bus.publish("GPS", self.boatData.gps_coord.lat, self.boatData.gps_coord.long,
                           self.boatData.hog, self.boatData.sog, self.boatData.cog)
