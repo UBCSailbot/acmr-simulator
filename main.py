@@ -39,7 +39,7 @@ def run():
         hardware.update()
         print "Received: Rudder Angle = " + str(gVars.bus.getData().rudder) + " ; Prop. Setting = " \
                   + str(gVars.bus.getData().sheet_percent)
-        time.sleep(0.1)
+        time.sleep(0.25)
 
 
 def getCurrentData():
