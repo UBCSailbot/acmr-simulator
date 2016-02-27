@@ -70,7 +70,8 @@ class Simulator():
         self.apparentWindVector = standardcalc.Vector2D.zero()
 
         self.currentFlowAngle = random.randint(-180, 180)
-        self.currentFlowSpeed = float(random.randint(1, 5))
+        # self.currentFlowSpeed = float(random.randint(1, 5))
+        self.currentFlowSpeed = 0
         self.currentFlowVector = standardcalc.Vector2D.zero()
 
         self.displacement = standardcalc.Vector2D.zero()
