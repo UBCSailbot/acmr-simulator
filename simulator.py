@@ -40,7 +40,7 @@ class Simulator():
     # amount of wind speed change
     CURRENT_SPEED_FLUCTUATIONS = .03
     # runtime for the mcu
-    CLOCK_INTERVAL = 1 #was 0.01
+    CLOCK_INTERVAL = 1 # was 0.01
     # Time scale for calculations, if equal to clock interval the simulation will run in real time.
     TIME_SCALE = CLOCK_INTERVAL
     # Change in HOG for max rudder setting in 1 meter
@@ -111,7 +111,7 @@ class Simulator():
         self.adjust_true_wind()
         self.adjust_current()
         self.update_vectors()
-        self.adjust_cog_and_sog_for_current()
+        # self.adjust_cog_and_sog_for_current()
         self.adjust_position()
 
         if self.verbose:
@@ -142,7 +142,7 @@ class Simulator():
         # self.currentData['sheetPercentage'] = data.sheet_percent
 
         self.boatData.rudder = data.rudder
-
+        # self.boatData.rudder = 20
         # TODO: Revert once TCU implemented
         self.boatData.sheet_percent = 50
         # self.boatData.sheet_percent = data.sheet_percent
@@ -155,12 +155,12 @@ class Simulator():
 
     def gust_manager(self):
         if self.gustTimer <= 0:
-            if random.randint(1, self.GUST_PROBABILITY / self.TIME_SCALE) == 2:
+            if random.randint(1, self.GUST_PROBABILITY / self.CLOCK_INTERVAL) == 2:
                 self.preGustTrueWindAngle = self.trueWindAngle
                 self.preGustTrueWindSpeed = self.trueWindSpeed
                 self.trueWindSpeed = random.randint(20, 30)
                 self.trueWindAngle += random.randint(-5, 5)
-                self.gustTimer = random.randint(5, 80) / self.TIME_SCALE
+                self.gustTimer = random.randint(5, 80) / self.CLOCK_INTERVAL
         else:
             self.gustTimer -= 1
             if self.verbose:
@@ -170,15 +170,9 @@ class Simulator():
                 self.trueWindAngle = standardcalc.bound_to_180(self.preGustTrueWindAngle + random.randint(-1, 1))
 
     def adjust_hog(self):
-        # Make functional, i.e. go to desired rudder angle immediately
-        # hogChange = self.currentData['sog'] * math.sin(self.currentData['rudderAngle']* math.pi / 180.0) \
-        #             / self.L_CENTERBOARD_TO_RUDDER * self.TIME_SCALE
-        # self.currentData['hog'] += hogChange
-        # self.currentData['hog'] = standardcalc.bound_to_180(self.currentData['hog'])
-
         #Update HOG from rudder change
         hogChange = self.boatData.sow * math.sin(self.boatData.rudder * math.pi / 180.0) \
-                    / self.L_CENTERBOARD_TO_RUDDER * self.TIME_SCALE
+                    / self.L_CENTERBOARD_TO_RUDDER * self.CLOCK_INTERVAL
 
         self.boatData.hog += hogChange
         self.boatData.hog = standardcalc.bound_to_180(self.boatData.hog)
@@ -194,7 +188,7 @@ class Simulator():
         sowChange = ( standardcalc.calculate_sog_BSPD( self.boatData.awa,
                     self.boatData.windspeed) * self.boatData.sheet_percent / 100.0 ) - self.boatData.sow
 
-        self.boatData.sow += ( sowChange / self.SOW_DECAY_FACTOR )
+        self.boatData.sow += ( sowChange / self.SOW_DECAY_FACTOR )*self.CLOCK_INTERVAL
 
         # self.boatData.sog = standardcalc.calculate_sog_BSPD( self.boatData.awa,
         #                     self.boatData.windspeed) * self.boatData.sheet_percent / 100.0
@@ -204,7 +198,6 @@ class Simulator():
         if self.boatData.sog > max_sow:
             self.boatData.sog = max_sow
 
-        #
         # tempVector = standardcalc.Vector2D.create_from_angle(self.currentData['cog'], self.currentData['sog']) \
         #                   - self.currentFlowVector
         # self.currentData['sog'] = tempVector.length()
@@ -224,21 +217,16 @@ class Simulator():
 
     def adjust_true_wind(self):
         # True wind angle is allowed to fluctuate
-        # self.trueWindAngle += standardcalc.generate_bell_curve(self.WIND_ANGLE_FLUCTUATIONS * self.CLOCK_INTERVAL)
-        # self.trueWindSpeed += standardcalc.generate_bell_curve(self.WIND_SPEED_FLUCTUATIONS * self.CLOCK_INTERVAL)
-
-        self.trueWindAngle += random.gauss(0,1) * self.CLOCK_INTERVAL
-        self.trueWindSpeed += random.gauss(0,1) * self.CLOCK_INTERVAL
+        self.trueWindAngle += random.gauss(0, 1) * self.CLOCK_INTERVAL
+        self.trueWindSpeed += random.gauss(0, 1) * self.CLOCK_INTERVAL
         self.trueWindAngle = standardcalc.bound_to_180(self.trueWindAngle)
         self.trueWindSpeed = abs(self.trueWindSpeed)
 
         self.windVector = -standardcalc.Vector2D.create_from_angle(self.trueWindAngle, self.trueWindSpeed)
 
     def adjust_current(self):
-        # self.currentFlowAngle += standardcalc.generate_bell_curve(self.CURRENT_ANGLE_FLUCTUATIONS * self.CLOCK_INTERVAL)
-        # self.currentFlowSpeed += standardcalc.generate_bell_curve(self.CURRENT_SPEED_FLUCTUATIONS * self.CLOCK_INTERVAL)
-        self.currentFlowAngle += random.gauss(0,1) * self.CLOCK_INTERVAL
-        self.currentFlowSpeed += random.gauss(0,1) * self.CLOCK_INTERVAL
+        self.currentFlowAngle += random.gauss(0, 1) * self.CLOCK_INTERVAL
+        self.currentFlowSpeed += random.gauss(0, 1) * self.CLOCK_INTERVAL
         self.currentFlowAngle = standardcalc.bound_to_180(self.currentFlowAngle)
         self.currentFlowSpeed = abs(self.currentFlowSpeed)
 
