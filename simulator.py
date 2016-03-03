@@ -123,19 +123,6 @@ class Simulator():
         #     self.send_data_to_ui()
 
     def read_data(self):
-        # keys = ["hog", "cog", "awa", "sog", "windSpeed", "latitude", "longitude", "rudderAngle", "sheetPercentage"]
-        #
-        # for index, key in enumerate(keys):
-        #      self.currentData[key] = float(current_data[index])
-
-        #To enter rudder angle and sheet percentage manually
-        # rudderAngle = input("Enter rudder angle: ")
-        # self.currentData['rudderAngle'] = rudderAngle
-        # sheetPercentage = input("Enter sheet percentage: ")
-        # self.currentData['sheetPercentage'] = sheetPercentage
-
-        # To read rudder angle and sheet percentage from file
-        # input_file = open('dummy_boat_inputs.txt','r')
 
         data = gVars.bus.getData()
         # self.currentData['rudderAngle'] = data.rudder
@@ -144,8 +131,8 @@ class Simulator():
         self.boatData.rudder = data.rudder
         # self.boatData.rudder = 20
         # TODO: Revert once TCU implemented
-        self.boatData.sheet_percent = 50
-        # self.boatData.sheet_percent = data.sheet_percent
+        # self.boatData.sheet_percent = 50
+        self.boatData.sheet_percent = data.sheet_percent
 
         # self.currentData['rudderAngle'] = float(input_file.readline())
         # self.currentData['sheetPercentage'] = float(input_file.readline())
@@ -241,11 +228,14 @@ class Simulator():
 
         self.apparentWindVector = self.windVector - self.boatVector
 
-        # 4 Feb 2016
         self.boatData.awa = standardcalc.bound_to_180(
             standardcalc.Vector2D.angle_between(self.boatVector, -self.apparentWindVector))
         self.boatData.windspeed = self.apparentWindVector.length()
 
+    def update_sailAngles(self):
+        # Using 2 right now, but this should be the factor relating tail Angle and angle of attack
+        # wingAngle is defined in the same way as AWA, relative to the boat
+        self.boatData.wingAngle = self.boatData.awa - self.boatData.tailAngle * 2
 
     def adjust_position(self):
         # Vector addition
