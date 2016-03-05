@@ -56,6 +56,8 @@ class Simulator():
     #NEW CONSTANTS
     # This is the centerboard to rudder distance L
     L_CENTERBOARD_TO_RUDDER = 1.0
+    # Maximum tail angle
+    MAX_TAIL_ANGLE = 15.0
 
     def __init__(self, verbose, reset, gust, data_to_ui):
         random.seed()
@@ -111,7 +113,7 @@ class Simulator():
         self.adjust_true_wind()
         self.adjust_current()
         self.update_vectors()
-        # self.adjust_cog_and_sog_for_current()
+        self.update_sailAngles()
         self.adjust_position()
 
         if self.verbose:
@@ -125,17 +127,16 @@ class Simulator():
     def read_data(self):
 
         data = gVars.bus.getData()
-        # self.currentData['rudderAngle'] = data.rudder
-        # self.currentData['sheetPercentage'] = data.sheet_percent
 
         self.boatData.rudder = data.rudder
-        # self.boatData.rudder = 20
         # TODO: Revert once TCU implemented
-        # self.boatData.sheet_percent = 50
-        self.boatData.sheet_percent = data.sheet_percent
-
-        # self.currentData['rudderAngle'] = float(input_file.readline())
-        # self.currentData['sheetPercentage'] = float(input_file.readline())
+        tailAngle = data.tailAngle
+        if tailAngle > self.MAX_TAIL_ANGLE:
+            self.boatData.tailAngle = self.MAX_TAIL_ANGLE
+        elif tailAngle < -self.MAX_TAIL_ANGLE:
+            self.boatData.tailAngle = -self.MAX_TAIL_ANGLE
+        else:
+            self.boatData.tailAngle = tailAngle
 
     def update_old_data(self):
         self.oldBoatDataString = self.boatData.__repr__()
@@ -172,8 +173,13 @@ class Simulator():
     def adjust_sow(self):
         # v_b = w_a*f(phi_aw)*beta where w_a is the apparent wind speed, f(phi_aw) is the norm. BSPD and beta is
         # the control parameter setting (e.g. sheet setting)
+        # sowChange = ( standardcalc.calculate_sog_BSPD( self.boatData.awa,
+        #             self.boatData.windspeed) * self.boatData.sheet_percent / 100.0 ) - self.boatData.sow
+
+        # Use tailAngle to adjust sowChange. Here we assume that the tail
         sowChange = ( standardcalc.calculate_sog_BSPD( self.boatData.awa,
-                    self.boatData.windspeed) * self.boatData.sheet_percent / 100.0 ) - self.boatData.sow
+                    self.boatData.windspeed) * abs(self.boatData.tailAngle / self.MAX_TAIL_ANGLE)*0.6) - self.boatData.sow
+
 
         self.boatData.sow += ( sowChange / self.SOW_DECAY_FACTOR )*self.CLOCK_INTERVAL
 

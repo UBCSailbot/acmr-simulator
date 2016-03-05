@@ -52,7 +52,7 @@ class ZMQHandler(threading.Thread):
             elif datatopic == 'PROP':
                 if(len(received) != 2):
                     return
-                self.data.sheet_percent = int(received[1])
+                self.data.tailAngle = float(received[1])
             elif datatopic == 'GPS':
                 if(len(received) != 6):
                     return
