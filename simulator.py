@@ -121,8 +121,7 @@ class Simulator():
             # print "FINAL SOG:  " + str(self.currentData['sog'])
 
         self.write_data()
-        # if self.dataToUI:
-        #     self.send_data_to_ui()
+        gVars.boatVars = self.boatData
 
     def read_data(self):
 

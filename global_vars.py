@@ -7,7 +7,7 @@ Global Variables for the control logic
     classes, however, they are not set outside of main.py or simulator.py
 
 """
-
+import datatype
 
 
 
@@ -17,6 +17,7 @@ simulated = set()
 # queueParameters = []
 # boundaries = []
 
+boatVars = datatype.BoatData.BoatData()
 interfaceData = None
 
 run = True
@@ -24,7 +25,6 @@ currentProcess = None
 currentParams = None
 taskStartTime = None
 currentColumn = 0
-
 verbose = False
 reset = False
 gust = False

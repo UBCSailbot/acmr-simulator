@@ -10,19 +10,12 @@ from datatype import GPSCoordinate
 from datatype import BoatData
 import time
 
+import sys
+# from flask import Flask, render_template, request
+# from flask.ext.googlemaps import GoogleMaps, Map
+
+
 def run():
-
-
-    # InterfaceThread = run_threads.ZMQ_Thread(2, "Interface Thread")
-    # SimulatorThread = run_threads.MainSimulatorThread(1, "Simulator Thread")
-
-
-    # SimulatorThread.start()
-    # InterfaceThread.start()
-    # Example calls:
-    # hardware.getAWA()
-    # hardware.getWindSpeed()
-
     print "Starting the Bus"
 
     gVars.simulated.add('TCU')
@@ -35,10 +28,10 @@ def run():
 
     # gVars.interfaceData = BoatData.BoatData()
     hardware = simulator.Simulator( gVars.verbose, gVars.reset, gVars.gust, gVars.dataToUI)
+    gVars.boatVars = BoatData.BoatData();
+
     while 1:
         hardware.update()
-        # print "Received: Rudder Angle = " + str(gVars.bus.getData().rudder) + " ; Prop. Setting = " \
-        #           + str(gVars.bus.getData().sheet_percent)
         time.sleep(0.25)
 
 

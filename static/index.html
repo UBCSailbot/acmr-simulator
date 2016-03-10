@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>Simple markers</title>
+    <link rel="stylesheet" href="css/maps.css">
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js"></script>
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      #map_canvas {
+        height: 100%;
+      }
+    </style>
+
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDKGYSpPj5v2q19qogWxOcVrnwKsUdtlgY&callback=initMap">
+    </script>
+    <script src="bower_components/angular/angular.min.js"></script>
+    <script src="bower_components/angular/angular.min.js.map"></script>
+    <script src="js/app.js"></script>
+    <script src="bower_components/angular/angular.js"></script>
+  </head>
+  <body ng-app="app" ng-controller="AppCtrl as app">
+    <div id="map_canvas"></div>
+  </body>
+</html>
+
