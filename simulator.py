@@ -280,8 +280,9 @@ class Simulator():
             print "CURRENT ANGLE: " + '%.8f' % self.currentFlowAngle
 
         else:
-            print self.oldBoatDataString
-            print self.boatData.__repr__()
+            pass
+            # print self.oldBoatDataString
+            # print self.boatData.__repr__()
 
     def reset_data(self):
         # # Create the space delimited lines

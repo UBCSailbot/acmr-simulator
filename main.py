@@ -26,7 +26,6 @@ def run():
 
     print "Starting the Simulator"
 
-    # gVars.interfaceData = BoatData.BoatData()
     hardware = simulator.Simulator( gVars.verbose, gVars.reset, gVars.gust, gVars.dataToUI)
     gVars.boatVars = BoatData.BoatData();
 

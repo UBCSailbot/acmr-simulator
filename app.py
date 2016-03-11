@@ -3,66 +3,60 @@ import sys
 import simulator
 from drivers import interface
 import global_vars as gVars
-import run_threads
-import static_vars as sVars
-from datetime import datetime
-from datatype import GPSCoordinate
 from datatype import BoatData
 import time
 import sys
 import threading
 import atexit
 from flask import Flask
-import random
 import json
 import requests
 from flask import jsonify
 
-POLL_TIME = 5
-
-
 # variables that are accessible from anywhere
-commonDataStruct = BoatData.BoatData()
+boatDataStruct = BoatData.BoatData()
 # lock to control access to variable
 dataLock = threading.Lock()
 # thread handler
-yourThread = threading.Thread()
-
+simulatorThread = threading.Thread()
 
 app = Flask(__name__, static_url_path='')
 
-
-
-
 def run():
+    print "Starting the Bus"
+
+    gVars.simulated.add('TCU')
+    gVars.simulated.add('SCU')
+    gVars.simulated.add('MC')
+    gVars.bus = interface.Interface(gVars.simulated)
+
     def interrupt():
-        global yourThread
-        yourThread.cancel()
+        global simulatorThread
+        simulatorThread.cancel()
 
-    def doStuff():
-        global commonDataStruct
-        global yourThread
+    def runSimulator():
+        global boatDataStruct
+        global simulatorThread
         with dataLock:
-            commonDataStruct.gps_coord.lat = random.uniform(0,5)
-            commonDataStruct.gps_coord.long = random.uniform(0,5)
+            sim = simulator.Simulator( gVars.verbose, gVars.reset, gVars.gust, gVars.dataToUI)
+            while 1:
+                sim.update()
+                boatDataStruct = sim.boatData
+                time.sleep(0.25)
 
 
-        # Set the next thread to happen
-        yourThread = threading.Timer(POLL_TIME, doStuff, ())
-        yourThread.start()
-
-    def doStuffStart():
+    def runSimThread():
         # Do initialisation stuff here
-        global yourThread
+
+        global simulatorThread
         # Create your thread
-        yourThread = threading.Timer(POLL_TIME, doStuff, ())
-        yourThread.start()
+        simulatorThread = threading.Timer(2, runSimulator, ())
+        simulatorThread.start()
 
     # Initiate
-    doStuffStart()
+    runSimThread()
     # When you kill Flask (SIGTERM), clear the trigger for the next thread
     atexit.register(interrupt)
-
     app.run(debug=True)
 
 @app.route('/')
@@ -71,18 +65,40 @@ def index():
 
 @app.route('/data')
 def data():
-    lat = commonDataStruct.gps_coord.lat
-    lng = commonDataStruct.gps_coord.long
+    lat = 35 + boatDataStruct.gps_coord.lat
+    lng = 130 + boatDataStruct.gps_coord.long
     # lat = random.uniform(35, 37)
     # lng = random.uniform(139, 141)
-    coords = [lat, lng]
+    aws = boatDataStruct.windspeed
+    awa = boatDataStruct.awa
+    coords = [lat, lng, aws, awa]
     return json.dumps(coords)
 
 
 if __name__ == '__main__':
     try:
+        gVars.verbose = gVars.reset = gVars.gust = gVars.dataToUI = False
+        for arg in sys.argv:
+            if arg == "--help":
+                print "Sailing condition simulator for the UBC Sailbot Transat MCU"
+                print "Usage instructions: 'python main.py <flags>'"
+                print " Pass desired flags separated by spaces"
+                print " -v : Verbose output"
+                print " -r : Reset simulation"
+                print " -g : Gust simulation enabled"
+                print " -d : Send data to UI (do not use with Route Making)"
+                sys.exit()
+            if arg == "-v":
+                gVars.verbose = True
+            if arg == "-r":
+                gVars.reset = True
+            if arg == "-g":
+                gVars.gust = True
+            if arg == "-d":
+                gVars.dataToUI = True
         sys.exit(run())
+
     except KeyboardInterrupt:
         print "\n Exit - Keyboard Interrupt"
 
-    # gVars.bus.close()
+    gVars.bus.close()
