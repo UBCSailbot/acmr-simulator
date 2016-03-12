@@ -61,17 +61,17 @@ class Simulator():
 
     def __init__(self, verbose, reset, gust, data_to_ui):
         random.seed()
-        # self.currentData = {'latitude': 0, 'longitude': 0, 'hog': 0, 'cog': 0, 'awa': 0, 'sog': 0, 'windSpeed': 0,
-        #                     'rudderAngle': 0, 'sheetPercentage': 0}
-        # self.oldData = self.currentData.copy()
+
         # Choose Random Wind Angle between -180 and 180
         self.trueWindAngle = random.randint(-180, 180)
-        self.trueWindSpeed = float(random.randint(10, 15))
-        self.windVector = standardcalc.Vector2D.zero()
+        # Choose random wind speed
+        self.trueWindSpeed = float(random.randint(5, 10))
 
+        self.windVector = standardcalc.Vector2D.zero()
         self.apparentWindVector = standardcalc.Vector2D.zero()
 
         self.currentFlowAngle = random.randint(-180, 180)
+        # TODO: Uncomment initialized current flow. Currently set to 0 for debugging.
         # self.currentFlowSpeed = float(random.randint(1, 5))
         self.currentFlowSpeed = 0
         self.currentFlowVector = standardcalc.Vector2D.zero()
@@ -116,10 +116,6 @@ class Simulator():
         self.update_sailAngles()
         self.adjust_position()
 
-        if self.verbose:
-            pass
-            # print "FINAL SOG:  " + str(self.currentData['sog'])
-
         self.write_data()
         gVars.boatVars = self.boatData
 
@@ -157,7 +153,7 @@ class Simulator():
                 self.trueWindAngle = standardcalc.bound_to_180(self.preGustTrueWindAngle + random.randint(-1, 1))
 
     def adjust_hog(self):
-        #Update HOG from rudder change
+        # Update HOG from rudder change
         hogChange = self.boatData.sow * math.sin(self.boatData.rudder * math.pi / 180.0) \
                     / self.L_CENTERBOARD_TO_RUDDER * self.CLOCK_INTERVAL
 
@@ -190,26 +186,10 @@ class Simulator():
         if self.boatData.sog > max_sow:
             self.boatData.sog = max_sow
 
-        # tempVector = standardcalc.Vector2D.create_from_angle(self.currentData['cog'], self.currentData['sog']) \
-        #                   - self.currentFlowVector
-        # self.currentData['sog'] = tempVector.length()
-        #
-        # # idealSOG = multiplier * max_sog
-        # self.currentData['sog'] = self.currentData['sog'] + ((max_sog - self.currentData['sog']) / self.SOG_DECAY_FACTOR)
-        #
-        # # Rectify if negative
-        # self.currentData['sog'] = abs(self.currentData['sog'])
-        #
-
-        # 4 Feb 2016. Commented this out. Not that useful. Can uncomment later for debugging
-        # if self.verbose:
-        #     print "IDEAL SHEET SETTINGS: " + str(standardcalc.calculate_ideal_sheet_percentage(self.currentData['awa']))
-        #     print "MAX SOG: " + str(max_sog)
-        #     print "NEW SOG:  " + str(self.currentData['sog'])
 
     def adjust_true_wind(self):
         # True wind angle is allowed to fluctuate
-        self.trueWindAngle += random.gauss(0, 1) * self.CLOCK_INTERVAL
+        self.trueWindAngle += random.gauss(0, 10) * self.CLOCK_INTERVAL
         self.trueWindSpeed += random.gauss(0, 1) * self.CLOCK_INTERVAL
         self.trueWindAngle = standardcalc.bound_to_180(self.trueWindAngle)
         self.trueWindSpeed = abs(self.trueWindSpeed)
@@ -246,11 +226,6 @@ class Simulator():
         # Vector addition
         self.displacement = self.CLOCK_INTERVAL * self.boatVector
 
-        # self.currentData['latitude'], self.currentData['longitude'] = standardcalc.shift_coordinates(
-        #     self.currentData['latitude'],
-        #     self.currentData['longitude'],
-        #     self.displacement)
-
         self.boatData.gps_coord.lat, self.boatData.gps_coord.long = standardcalc.shift_coordinates(
             self.boatData.gps_coord.lat,
             self.boatData.gps_coord.long,
@@ -259,7 +234,7 @@ class Simulator():
 
     def write_data(self):
 
-
+        # Publish GPS and AW data to the bus.
         gVars.bus.publish("GPS", self.boatData.gps_coord.lat, self.boatData.gps_coord.long,
                           self.boatData.hog, self.boatData.sog, self.boatData.cog)
         gVars.bus.publish("AW", self.boatData.windspeed, self.boatData.awa)
@@ -280,9 +255,7 @@ class Simulator():
             print "CURRENT ANGLE: " + '%.8f' % self.currentFlowAngle
 
         else:
-            pass
-            # print self.oldBoatDataString
-            # print self.boatData.__repr__()
+            print self.boatData.__repr__()
 
     def reset_data(self):
         # # Create the space delimited lines

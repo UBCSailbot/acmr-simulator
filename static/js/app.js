@@ -1,109 +1,78 @@
 var app = angular.module("app", []);
 
-//app.controller("AppCtrl", function($scope) {
-//
-//    var latlng = new google.maps.LatLng(35.7042995, 139.7597564);
-//    var mapOptions = {
-//        zoom: 8,
-//        center: latlng,
-//        mapTypeId: google.maps.MapTypeId.ROADMAP
-//    };
-//
-//    $scope.map = new google.maps.Map(document.getElementById("map_canvas"), mapOptions);
-//
-//})
-
+// Wrap the entire thing with the controller.
 app.controller('AppCtrl', function($scope, $http) {
 
     $http.get('http://127.0.0.1:5000/data').success(function (output) {
 
+        // Initialize map options with center at starting point of boat
         $scope.coords = output;
         var latlng = new google.maps.LatLng($scope.coords[0], $scope.coords[1]);
         var mapOptions = {
-            zoom: 14,
+            zoom: 15,
             center: latlng,
             mapTypeId: google.maps.MapTypeId.ROADMAP
         };
 
+        // Create map with ID: "map_canvas"
         $scope.map = new google.maps.Map(document.getElementById("map_canvas"), mapOptions);
+        $scope.map.setOptions({scrollwheel:true})
 
-        var flightPath = new google.maps.Polyline({
-            path: [latlng, new google.maps.LatLng($scope.coords[0]+1, $scope.coords[1]+1)],
-            geodesic: true,
-            strokeColor: '#FF0000',
-            strokeOpacity: 1.0,
-            strokeWeight: 2
+        // Set coordinates of destination as a flag.
+        $scope.marker = new google.maps.Marker({
+            position: {lat: $scope.coords[5], lng: $scope.coords[6]},
+            map: $scope.map,
+            title: 'Current Position',
+            icon: 'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png'
         });
-
-        flightPath.setMap($scope.map);
-
-        //var richMarkerContent = document.createElement('div')
-        //
-        //// arrow image
-        //var arrowImage           = new Image();
-        //arrowImage.src           = 'http://www.openclipart.org/image/250px/' +
-        //                           'svg_to_png/Anonymous_Arrow_Down_Green.png';
-        //// rotation in degree
-        //var directionDeg         = 144 ;
-        //
-        //// create a container for the arrow
-        //var rotationElement      = document.createElement('div');
-        //var rotationStyles       = 'display:block;' +
-        //                           '-ms-transform:      rotate(%rotationdeg);' +
-        //                           '-o-transform:       rotate(%rotationdeg);' +
-        //                           '-moz-transform:     rotate(%rotationdeg);' +
-        //                           '-webkit-transform:  rotate(%rotationdeg);' ;
-        //
-        //// replace %rotation with the value of directionDeg
-        //rotationStyles           = rotationStyles.split('%rotation').join(directionDeg);
-        //
-        //rotationElement.setAttribute('style', rotationStyles);
-        //rotationElement.setAttribute('alt',   'arrow');
-        //
-        //// append image into the rotation container element
-        //rotationElement.appendChild(arrowImage);
-        //
-        //// append rotation container into the richMarker content element
-        //richMarkerContent.appendChild(rotationElement);
-        //
-        //// create a rich marker ("position" and "map" are google maps objects)
-        //new RichMarker(
-        //    {
-        //        position    : latlng,
-        //        map         : $scope.map,
-        //        draggable   : false,
-        //        flat        : true,
-        //        anchor      : RichMarkerPosition.TOP_RIGHT,
-        //        content     : richMarkerContent.innerHTML
-        //    }
-        //);
     });
 
+    // Loop n times. (Eventually make this infinite.)
     var i = 0, n = 100;
     function f() {
+        // Get new data in specified url.
         $http.get('http://127.0.0.1:5000/data').success(function (output) {
-
             $scope.coords = output;
             var latlng = new google.maps.LatLng($scope.coords[0], $scope.coords[1]);
 
+            // Use this to recenter the simulation map on each update
+            //$scope.map.setCenter(latlng)
+
+            // Create marker for current position of boat.
+            // TODO: Replace with more appropriate/informative marker.
             $scope.marker = new google.maps.Marker({
                 position: latlng,
                 map: $scope.map,
                 title: 'Current Position'
             });
 
-            var flightPath = new google.maps.Polyline({
-                path: [new google.maps.LatLng($scope.coords[0], $scope.coords[1]),
-                       new google.maps.LatLng($scope.coords[0]+0.1*Math.sin($scope.coords[3]/180*2*Math.PI),
-                           $scope.coords[1]+0.1*Math.cos($scope.coords[3]/180*2*Math.PI))],
+            // Create arrow symbol to add to polylines
+            var lineSymbol = {
+                path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW
+            };
+
+            // Calculate True Wind Angle
+            var twa_rad = $scope.coords[2]*Math.PI/180;
+
+            // Erase previous True Wind polyline + arrow with delay of 1000ms
+            setTimeout( function() { windPath.setMap(null);}, 1000 )
+
+            // Create new polyline path for the True Wind.
+            var windPath = new google.maps.Polyline({
+                path: [new google.maps.LatLng($scope.coords[0]-0.015*Math.sin(twa_rad),
+                           $scope.coords[1]-0.015*Math.cos(twa_rad)),
+                       new google.maps.LatLng($scope.coords[0]-0.005*Math.sin(twa_rad),
+                           $scope.coords[1]-0.005*Math.cos(twa_rad))],
                 geodesic: true,
                 strokeColor: '#FF0000',
                 strokeOpacity: 1.0,
-                strokeWeight: 2
+                strokeWeight: 2,
+                icons: [{icon: lineSymbol,
+                        offset: '100%' }]
             });
 
-            flightPath.setMap($scope.map);
-
+            // Add True Wind polyline + arrow to the current map.
+            windPath.setMap($scope.map);
         });
 
         i++;
