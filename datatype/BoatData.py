@@ -21,9 +21,10 @@ class BoatData:
     def __repr__(self):
         return (
         'AWA:{awa}, WSPD:{wspd}, HOG:{hog}, COG:{cog}, SOG:{sog}, LAT:{lat}, LONG:{long}, Sat#:{numsat}, Auto:{auto}, '
-        'Rudder:{rudder}, WingAngle:{wingAngle}, TailAngle:{tailAngle}, SOW:{sow}'.format(awa=self.awa, wspd=self.windspeed,
-                                                  hog=self.hog, cog=self.cog, sog=self.sog,
+        'Rudder:{rudder}, WingAngle:{wingAngle}, TailAngle:{tailAngle}, SOW:{sow}'.format(awa=round(self.awa,1)
+                                                , wspd=round(self.windspeed,1),
+                                                  hog=round(self.hog,1), cog=round(self.cog,1), sog=round(self.sog,1),
                                                   lat=self.gps_coord.lat, long=self.gps_coord.long,
                                                   numsat=self.num_sat, auto=self.auto,
-                                                  rudder=self.rudder, wingAngle=self.wingAngle,
-                                                  tailAngle=self.tailAngle, sow=self.sow))
+                                                  rudder=self.rudder, wingAngle=round(self.wingAngle,1),
+                                                  tailAngle=self.tailAngle, sow=round(self.sow,1)))

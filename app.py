@@ -58,7 +58,7 @@ def run():
     # atexit.register(interrupt)
 
     # Run the Flask application
-    app.run()
+    app.run(threaded=True)
 
 @app.route('/')
 def index():
@@ -69,13 +69,15 @@ def index():
 def data():
     lat = boatDataStruct.gps_coord.lat
     lng = boatDataStruct.gps_coord.long
-    aws = boatDataStruct.windspeed
-    awa = boatDataStruct.awa
+    # aws = boatDataStruct.windspeed
+    # awa = boatDataStruct.awa
+    hog = boatDataStruct.hog
+    sow = boatDataStruct.sow
     twa = TWA
-    dest = GPSCoordinate.GPSCoordinate(0,0).createCoordDistAway(10,10)
+    dest = GPSCoordinate.GPSCoordinate(0,0).createCoordDistAway(0,100)
     # Data to be sent in one array.
     # TODO: Use more efficient and intuitive data structure.
-    coords = [lat, lng, twa, aws, awa, dest.lat, dest.long]
+    coords = [lat, lng, twa, sow, hog, dest.lat, dest.long]
     # Converts data to JSON.
     return json.dumps(coords)
 
