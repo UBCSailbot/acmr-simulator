@@ -31,6 +31,10 @@ ROUTE_FILE = os.path.join(MCU_DIRECTORY, "routeLink")
 DUMMY_BOAT_INPUTS_FILE = os.path.join(MCU_DIRECTORY,"dummy_boat_inputs.txt")
 
 class Simulator():
+    # maximum wind speed (20 knots; typical is 6 - 12 knots)
+    MAX_WIND_SPEED = 10.0
+    # maximum current speed (~1 knot; max current speed in English Bay: 0.75 knots)
+    MAX_CURRENT_SPEED = 0.5
     # degrees of wind change
     WIND_ANGLE_FLUCTUATIONS = .2
     # amount of wind speed change
@@ -40,7 +44,7 @@ class Simulator():
     # amount of wind speed change
     CURRENT_SPEED_FLUCTUATIONS = .03
     # runtime for the mcu
-    CLOCK_INTERVAL = 0.5  # was 0.01
+    CLOCK_INTERVAL = 0.25  # was 0.01
     # Time scale for calculations, if equal to clock interval the simulation will run in real time.
     TIME_SCALE = CLOCK_INTERVAL
     # Change in HOG for max rudder setting in 1 meter
@@ -55,27 +59,28 @@ class Simulator():
     DATA_DELAY = 0.01
     #NEW CONSTANTS
     # This is the centerboard to rudder distance L
-    L_CENTERBOARD_TO_RUDDER = 1.0
+    L_CENTERBOARD_TO_RUDDER = 0.2
     # Maximum tail angle
     MAX_TAIL_ANGLE = 15.0
+    # Time constant for exponential decay of SOW
+    SOW_TIME_CONSTANT = 2.0
 
     def __init__(self, verbose, reset, gust, data_to_ui):
         random.seed()
 
         # Choose Random Wind Angle between -180 and 180
         # self.trueWindAngle = random.randint(-180, 180)
-        self.trueWindAngle = 90
-        # Choose random wind speed
-        self.trueWindSpeed = float(random.randint(5, 10))
+        self.trueWindAngle = 30.0
+        # Choose random wind speed (between typical values of 6 - 12 knots)
+        self.trueWindSpeed = float(random.uniform(5, 6))
 
         self.windVector = standardcalc.Vector2D.zero()
         self.windVector = standardcalc.Vector2D.create_from_angle(self.trueWindAngle, self.trueWindSpeed)
         self.apparentWindVector = standardcalc.Vector2D.zero()
 
         self.currentFlowAngle = random.randint(-180, 180)
-        # TODO: Uncomment initialized current flow. Currently set to 0 for debugging.
-        # self.currentFlowSpeed = float(random.randint(1, 5))
-        self.currentFlowSpeed = 0
+        self.currentFlowSpeed = 0.0
+        # self.currentFlowSpeed = float(random.uniform(0.2, 0.4))
         self.currentFlowVector = standardcalc.Vector2D.zero()
 
         self.boatVector = standardcalc.Vector2D.zero()
@@ -93,22 +98,11 @@ class Simulator():
         self.oldBoatData = BoatData.BoatData()
         self.oldBoatDataString = ""
 
-        # These are initializations that make it simple to debug
-        # self.trueWindAngle = 0
-        # self.trueWindSpeed = 0
-
-        # reset data stored in files
-        if reset:
-            self.reset_data()
-
-        if data_to_ui:
-            self.start_test()
-
     def update(self):
         self.read_data()
         self.update_old_data()
         self.adjust_true_wind()
-        self.adjust_current()
+        # self.adjust_current()
         if self.gust:
             self.gust_manager()
         self.adjust_aw()
@@ -125,8 +119,8 @@ class Simulator():
 
         data = gVars.bus.getData()
 
-        # self.boatData.rudder = data.rudder
-        self.boatData.rudder = 20
+        self.boatData.rudder = data.rudder
+        # self.boatData.rudder = 20
         # TODO: Revert once TCU implemented
         tailAngle = data.tailAngle
         tailAngle = 50
@@ -142,16 +136,21 @@ class Simulator():
 
     def adjust_true_wind(self):
         # True wind angle is allowed to fluctuate
-        # self.trueWindAngle += random.gauss(0, 5) * self.CLOCK_INTERVAL
-        self.trueWindSpeed += random.gauss(0, 1) * self.CLOCK_INTERVAL
+        self.trueWindAngle += random.gauss(0, 5) * self.CLOCK_INTERVAL
+        self.trueWindSpeed += random.gauss(0, 0.5) * self.CLOCK_INTERVAL
+        if self.trueWindSpeed > self.MAX_WIND_SPEED:
+            self.trueWindSpeed = self.MAX_WIND_SPEED
         self.trueWindAngle = standardcalc.bound_to_180(self.trueWindAngle)
         self.trueWindSpeed = abs(self.trueWindSpeed)
         self.windVector = standardcalc.Vector2D.create_from_angle(self.trueWindAngle, self.trueWindSpeed)
 
     def adjust_current(self):
-        self.currentFlowAngle += random.gauss(0, 1) * self.CLOCK_INTERVAL
-        self.currentFlowSpeed += random.gauss(0, 1) * self.CLOCK_INTERVAL
+        self.currentFlowAngle += random.gauss(0, 0.1) * self.CLOCK_INTERVAL
+        self.currentFlowSpeed += random.gauss(0, 1) * 0.5 * self.CLOCK_INTERVAL
         self.currentFlowAngle = standardcalc.bound_to_180(self.currentFlowAngle)
+        if self.currentFlowSpeed > self.MAX_CURRENT_SPEED:
+            self.currentFlowSpeed = self.MAX_CURRENT_SPEED
+
         self.currentFlowSpeed = abs(self.currentFlowSpeed)
         self.currentFlowVector = standardcalc.Vector2D.create_from_angle(self.currentFlowAngle, self.currentFlowSpeed)
 
@@ -173,13 +172,14 @@ class Simulator():
 
     def adjust_aw(self):
         self.boatVector = standardcalc.Vector2D.create_from_angle(self.boatData.hog, self.boatData.sow) \
-                          + self.currentFlowVector
+                          - self.currentFlowVector
         # Update COG and SOG
         self.boatData.cog = self.boatVector.angle()
         self.boatData.sog = self.boatVector.length()
 
         self.apparentWindVector = self.windVector - self.boatVector
 
+        # print str(self.apparentWindVector.angle()) + " " + str(self.apparentWindVector.length())
         self.boatData.awa = standardcalc.bound_to_180(
             standardcalc.Vector2D.angle_between(self.boatVector, -self.apparentWindVector))
         self.boatData.windspeed = self.apparentWindVector.length()
@@ -197,16 +197,21 @@ class Simulator():
 
         # self.boatData.sow += ( sowChange / self.SOW_DECAY_FACTOR )*self.CLOCK_INTERVAL
 
-        # self.boatData.sog = standardcalc.calculate_sog_BSPD(self.boatData.awa,
+        # next_sow = standardcalc.calculate_sog_BSPD(self.boatData.awa,
         #                     self.boatData.windspeed) * self.boatData.tailAngle / 100.0
-        self.boatData.sow = standardcalc.calculate_sog_BSPD(self.boatData.awa,
-                            self.boatData.windspeed) * 50.0 / 100.0
+        next_sow = standardcalc.calculate_sog_BSPD(self.boatData.awa,
+                    self.boatData.windspeed)*0.8
+        # self.boatData.sow = standardcalc.calculate_sog_BSPD(self.boatData.awa,
+        #                     self.boatData.windspeed) * 50.0 / 100.0
         max_sow = standardcalc.calculate_max_sog(self.boatData.awa, self.boatData.windspeed)
+
+        sow_change = (next_sow - self.boatData.sow)*math.exp(-self.SOW_TIME_CONSTANT*self.CLOCK_INTERVAL)
+
+        self.boatData.sow += sow_change
 
         if self.boatData.sow > max_sow:
             self.boatData.sow = max_sow
 
-        # self.boatData.sow = 2.0
 
     def adjust_hog(self):
         # Update HOG from rudder change
@@ -269,57 +274,8 @@ class Simulator():
             print "CURRENT ANGLE: " + '%.8f' % self.currentFlowAngle
 
         else:
-            print self.boatData.__repr__()
-
-    def reset_data(self):
-        # # Create the space delimited lines
-        # data_line = "0.00000000 0.00000000 -90.0000000 10.00000000 20.00000000 49.676614 -123.178798 0.00000000 " \
-        #             "70.00000000"  # Start Point: Jericho 49.276001 -123.200235, ^Squamish^, NL 53.57479000 -52.27294900
-        #
-        # output_file = open(LINK_FILE, "w+")
-        # output_file.write(data_line)
-        # output_file.close()
-        #
-        # route_file = open(ROUTE_FILE, "w+")
-        # route_file.write("")
-        # route_file.close()
-        #
-        # # RESET ROUTE
-        # # dataLine2 = "1 24 49.277415 -123.199393 49.301 -123.224 49.324253 -123.280875 49.343717 -123.291175 49.356465 -123.303191 49.368092 -123.310057 49.383740 -123.300101 49.414349 -123.288771 49.430205 -123.300101 49.440029 -123.277442 49.432885 -123.254439 49.416136 -123.255469 49.413233 -123.284652 49.426856 -123.303878 49.420826 -123.357779 49.415690 -123.406188 49.389103 -123.423354 49.375022 -123.436744 49.355347 -123.441550 49.333203 -123.444640 49.304109 -123.352286 49.300975 -123.238990 49.277415 -123.199393 49.276001 -123.200235"
-        # # dataLine2 = "1 8 49.277415 -123.199393 49.283540 -123.199793 49.281948 -123.204426 49.277415 -123.199393 49.283540 -123.199793 49.280778 -123.181104 49.277415 -123.199393 49.276001 -123.200235"
-        # # dataLine2 = "1 40 49.277415 -123.199393 49.302873 -123.237853 49.313058 -123.369603 49.273201 -123.726659 49.218515 -123.856435 49.177572 -123.896604 49.167696 -123.907762 49.154450 -123.915486 49.145018 -123.917203 49.143222 -123.902783 49.148611 -123.897805 49.166125 -123.917031 49.170614 -123.927846 49.175328 -123.932137 49.178133 -123.928533 49.181948 -123.924756 49.185539 -123.919263 49.182173 -123.896775 49.169828 -123.883214 49.154562 -123.873258 49.147938 -123.858838 49.145355 -123.848538 49.142323 -123.833604 49.139516 -123.807168 49.137831 -123.795323 49.136904 -123.789401 49.133338 -123.779616 49.130362 -123.770862 49.120757 -123.736100 49.125082 -123.722711 49.128115 -123.715930 49.128958 -123.703485 49.128452 -123.689151 49.121656 -123.681684 49.126824 -123.507104 49.268609 -123.431573 49.306231 -123.248925 49.288319 -123.207726 49.277415 -123.199393 49.276001 -123.200235"
-        # dataLine2 = "1 11 49.676614 -123.178798 49.666394 -123.202488 49.662616 -123.228237 49.648169 -123.243343 49.632383 -123.235447 49.610142 -123.236133 49.591228 -123.242656 49.573198 -123.258793 49.567186 -123.321621 49.560506 -123.261196 49.586554 -123.247463"
-        # outputFile2 = open(ROUTE_FILE, "w+")
-        # outputFile2.write(dataLine2)
-        # outputFile2.close()
-
-        if self.verbose:
-            # Debug printer
-            print "===================="
-            print "   Resetting Data   "
-            print "===================="
-
-    def send_data_to_ui(self):
-        if self.dataTimer <= 0:
-            # payload = {'b_i': 'test', 's': 'testing', 'lat': self.currentData['latitude'], 'lon': self.currentData['longitude'], 'w_a': self.currentData['awa'], 'w_s': self.currentData['windSpeed'], 'cond': 'unknown', 'hog': self.currentData['hog'], 'sog': self.currentData['sog'], 'p_p': '49.277415 -123.199393,49.301 -123.224,49.324253 -123.280875,49.343717 -123.291175,49.356465 -123.303191,49.368092 -123.310057,49.383740 -123.300101,49.414349 -123.288771,49.430205 -123.300101,49.440029 -123.277442,49.432885 -123.254439,49.416136 -123.255469,49.413233 -123.284652,49.426856 -123.303878,49.420826 -123.357779,49.415690 -123.406188,49.389103 -123.423354,49.375022 -123.436744,49.355347 -123.441550,49.333203 -123.444640,49.304109 -123.352286,49.300975 -123.238990,49.277415 -123.199393,49.276001 -123.200235'}
-            # payload = {'b_i': 'test', 's': 'testing', 'lat': self.currentData['latitude'], 'lon': self.currentData['longitude'], 'w_a': self.currentData['awa'], 'w_s': self.currentData['windSpeed'], 'cond': 'unknown', 'hog': self.currentData['hog'], 'sog': self.currentData['sog'], 'p_p': '49.277415 -123.199393,49.302873 -123.237853,49.313058 -123.369603,49.273201 -123.726659,49.218515 -123.856435,49.177572 -123.896604,49.167696 -123.907762,49.154450 -123.915486,49.145018 -123.917203,49.143222 -123.902783,49.148611 -123.897805,49.166125 -123.917031,49.170614 -123.927846,49.175328 -123.932137,49.178133 -123.928533,49.181948 -123.924756,49.185539 -123.919263,49.182173 -123.896775,49.169828 -123.883214,49.154562 -123.873258,49.147938 -123.858838,49.145355 -123.848538,49.142323 -123.833604,49.139516 -123.807168,49.137831 -123.795323,49.136904 -123.789401,49.133338 -123.779616,49.130362 -123.770862,49.120757 -123.736100,49.125082 -123.722711,49.128115 -123.715930,49.128958 -123.703485,49.128452 -123.689151,49.121656 -123.681684,49.126824 -123.507104,49.268609 -123.431573,49.306231 -123.248925,49.288319 -123.207726,49.277415 -123.199393,49.276001 -123.200235'}
-            payload = dict(b_i='test', s='testing', lat=self.currentData['latitude'],
-                           lon=self.currentData['longitude'], w_a=self.currentData['awa'],
-                           w_s=self.currentData['windSpeed'], cond='unknown', hog=self.currentData['hog'],
-                           sog=self.currentData['sog'],
-                           p_p='49.676614 -123.178798,49.666394 -123.202488,49.662616 -123.228237,49.648169 -123.243343,49.632383 -123.235447,49.610142 -123.236133,49.591228 -123.242656,49.573198 -123.258793,49.567186 -123.321621,49.560506 -123.261196,49.586554 -123.247463')
-            r = requests.get("http://ubctransat.com:6543/api/add", params=payload)
-            if self.verbose:
-                # Debug printer
-                print "========================"
-                print "   Sending Data To UI   "
-                # print r.url
-                # print r.text
-                print "========================"
-
-            self.dataTimer = self.DATA_DELAY / self.CLOCK_INTERVAL
-        else:
-            self.dataTimer -= 1
+            print self.boatData.__repr__() + ", CFS:" + str(round(self.currentFlowSpeed,2)) + \
+                  ", CFA:" + str(round(self.currentFlowAngle,2))
 
     '''tell the ui that we are starting a new test'''
     @staticmethod

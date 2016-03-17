@@ -27,4 +27,4 @@ class BoatData:
                                                   lat=self.gps_coord.lat, long=self.gps_coord.long,
                                                   numsat=self.num_sat, auto=self.auto,
                                                   rudder=self.rudder, wingAngle=round(self.wingAngle,1),
-                                                  tailAngle=self.tailAngle, sow=round(self.sow,1)))
+                                                  tailAngle=self.tailAngle, sow=round(self.sow,3)))

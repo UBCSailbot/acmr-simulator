@@ -303,9 +303,16 @@ class Vector2D():
         :param v2: Vector to measure angle of w.r.t v1
         :return: Angle between the two vectors, where 0 means they point in the same direction
         -90 means v2 points to the west of v1, etc. 0 is returned if either is a zero vector.
+        Modified by L.Garcia 15 March 2016: If either is a zero vector, the angle of the other is returned.
+        If both are zero vectors, 0 is returned.
         """
-        if v1 == Vector2D.zero() or v2 == Vector2D.zero():
+        if v1 == Vector2D.zero() and v2 == Vector2D.zero():
             return 0
+        elif v1 == Vector2D.zero():
+            return -v2.angle()
+        elif v2 == Vector2D.zero():
+            return v1.angle()
+
         # Use dot product to find angle
         angle = math.degrees(math.acos(Vector2D.dot(v1, v2) / (v1.length() * v2.length())))
 

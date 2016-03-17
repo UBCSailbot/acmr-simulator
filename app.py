@@ -11,6 +11,7 @@ import atexit
 from flask import Flask
 import json
 from datatype import GPSCoordinate
+import standardcalc
 import requests
 from flask import jsonify
 
@@ -30,6 +31,7 @@ def interrupt():
 def runSimulator():
     global boatDataStruct
     global TWA
+    global currentVector
     global simulatorThread
     with dataLock:
         sim = simulator.Simulator(gVars.verbose, gVars.reset, gVars.gust, gVars.dataToUI)
@@ -37,6 +39,7 @@ def runSimulator():
             sim.update()
             boatDataStruct = sim.boatData
             TWA = sim.trueWindAngle
+            currentVector = sim.currentFlowVector
             time.sleep(0.25)
 
 def runSimThread():
@@ -74,10 +77,10 @@ def data():
     hog = boatDataStruct.hog
     sow = boatDataStruct.sow
     twa = TWA
-    dest = GPSCoordinate.GPSCoordinate(0,0).createCoordDistAway(0,100)
+    dest = GPSCoordinate.GPSCoordinate(0,0).createCoordDistAway(50,25)
     # Data to be sent in one array.
     # TODO: Use more efficient and intuitive data structure.
-    coords = [lat, lng, twa, sow, hog, dest.lat, dest.long]
+    coords = [lat, lng, twa, sow, hog, dest.lat, dest.long, currentVector.length(), currentVector.angle()]
     # Converts data to JSON.
     return json.dumps(coords)
 

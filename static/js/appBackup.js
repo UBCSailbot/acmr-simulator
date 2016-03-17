@@ -38,6 +38,8 @@
             }]
         });
 
+
+
         //var sow = $scope.coords[3];
         var hog_rad = $scope.coords[4] * Math.PI / 180.0;
         var boatDir = new google.maps.Polyline({
