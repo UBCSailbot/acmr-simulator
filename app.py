@@ -36,6 +36,8 @@ def runSimulator():
     with dataLock:
         sim = simulator.Simulator(gVars.verbose, gVars.reset, gVars.gust, gVars.dataToUI)
         while 1:
+            sim.dest_coords.lat = dest.lat
+            sim.dest_coords.long = dest.long
             sim.update()
             boatDataStruct = sim.boatData
             TWA = sim.trueWindAngle
@@ -44,6 +46,8 @@ def runSimulator():
 
 def runSimThread():
     global simulatorThread
+    global dest
+    dest = GPSCoordinate.GPSCoordinate(0,0).createCoordDistAway(50, 25)
     # Create simulator thread
     simulatorThread = threading.Timer(1, runSimulator, ())
     simulatorThread.start()
@@ -77,10 +81,10 @@ def data():
     hog = boatDataStruct.hog
     sow = boatDataStruct.sow
     twa = TWA
-    dest = GPSCoordinate.GPSCoordinate(0,0).createCoordDistAway(50,25)
+    awa = standardcalc.bound_to_180(boatDataStruct.hog + boatDataStruct.awa)
+    # dest = GPSCoordinate.GPSCoordinate(0,0).createCoordDistAway(100,50)
     # Data to be sent in one array.
-    # TODO: Use more efficient and intuitive data structure.
-    coords = [lat, lng, twa, sow, hog, dest.lat, dest.long, currentVector.length(), currentVector.angle()]
+    coords = [lat, lng, awa, sow, hog, dest.lat, dest.long, currentVector.length(), currentVector.angle()]
     # Converts data to JSON.
     return json.dumps(coords)
 

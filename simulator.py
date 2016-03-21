@@ -35,14 +35,6 @@ class Simulator():
     MAX_WIND_SPEED = 10.0
     # maximum current speed (~1 knot; max current speed in English Bay: 0.75 knots)
     MAX_CURRENT_SPEED = 0.5
-    # degrees of wind change
-    WIND_ANGLE_FLUCTUATIONS = .2
-    # amount of wind speed change
-    WIND_SPEED_FLUCTUATIONS = .4
-    # degrees of wind change
-    CURRENT_ANGLE_FLUCTUATIONS = .05
-    # amount of wind speed change
-    CURRENT_SPEED_FLUCTUATIONS = .03
     # runtime for the mcu
     CLOCK_INTERVAL = 0.25  # was 0.01
     # Time scale for calculations, if equal to clock interval the simulation will run in real time.
@@ -56,21 +48,22 @@ class Simulator():
     # How likely a gust is to occur every virtual second (Higher => Less probable)
     GUST_PROBABILITY = 100
     # Actual seconds between every time data is sent to the server
-    DATA_DELAY = 0.01
-    #NEW CONSTANTS
-    # This is the centerboard to rudder distance L
+    DATA_DELAY = 0.
+    # This is the centerboard to rudder distance L in metres
     L_CENTERBOARD_TO_RUDDER = 0.2
     # Maximum tail angle
     MAX_TAIL_ANGLE = 15.0
     # Time constant for exponential decay of SOW
-    SOW_TIME_CONSTANT = 2.0
+    SOW_TIME_CONSTANT = 1.0
+    # HOG change constant
+    HOG_CHANGE_FACTOR = 1.5
 
     def __init__(self, verbose, reset, gust, data_to_ui):
         random.seed()
 
         # Choose Random Wind Angle between -180 and 180
         # self.trueWindAngle = random.randint(-180, 180)
-        self.trueWindAngle = 30.0
+        self.trueWindAngle = 90
         # Choose random wind speed (between typical values of 6 - 12 knots)
         self.trueWindSpeed = float(random.uniform(5, 6))
 
@@ -94,6 +87,7 @@ class Simulator():
         self.preGustTrueWindSpeed = 0
         self.preGustTrueWindAngle = 0
 
+        self.dest_coords = GPSCoordinate.GPSCoordinate(0, 0)
         self.boatData = BoatData.BoatData()
         self.oldBoatData = BoatData.BoatData()
         self.oldBoatDataString = ""
@@ -136,13 +130,13 @@ class Simulator():
 
     def adjust_true_wind(self):
         # True wind angle is allowed to fluctuate
-        self.trueWindAngle += random.gauss(0, 5) * self.CLOCK_INTERVAL
+        # self.trueWindAngle += random.gauss(0, 1) * self.CLOCK_INTERVAL
         self.trueWindSpeed += random.gauss(0, 0.5) * self.CLOCK_INTERVAL
         if self.trueWindSpeed > self.MAX_WIND_SPEED:
             self.trueWindSpeed = self.MAX_WIND_SPEED
         self.trueWindAngle = standardcalc.bound_to_180(self.trueWindAngle)
         self.trueWindSpeed = abs(self.trueWindSpeed)
-        self.windVector = standardcalc.Vector2D.create_from_angle(self.trueWindAngle, self.trueWindSpeed)
+        self.windVector = -standardcalc.Vector2D.create_from_angle(self.trueWindAngle, self.trueWindSpeed)
 
     def adjust_current(self):
         self.currentFlowAngle += random.gauss(0, 0.1) * self.CLOCK_INTERVAL
@@ -187,8 +181,6 @@ class Simulator():
     def adjust_sow(self):
         # v_b = w_a*f(phi_aw)*beta where w_a is the apparent wind speed, f(phi_aw) is the norm. BSPD and beta is
         # the control parameter setting (e.g. sheet setting)
-        # sowChange = ( standardcalc.calculate_sog_BSPD( self.boatData.awa,
-        #             self.boatData.windspeed) * self.boatData.sheet_percent / 100.0 ) - self.boatData.sow
 
         # Use tailAngle to adjust sowChange.
         # sowChange = (standardcalc.calculate_sog_BSPD(self.boatData.awa,
@@ -200,40 +192,28 @@ class Simulator():
         # next_sow = standardcalc.calculate_sog_BSPD(self.boatData.awa,
         #                     self.boatData.windspeed) * self.boatData.tailAngle / 100.0
         next_sow = standardcalc.calculate_sog_BSPD(self.boatData.awa,
-                    self.boatData.windspeed)*0.8
+                    self.boatData.windspeed)*0.5
         # self.boatData.sow = standardcalc.calculate_sog_BSPD(self.boatData.awa,
         #                     self.boatData.windspeed) * 50.0 / 100.0
         max_sow = standardcalc.calculate_max_sog(self.boatData.awa, self.boatData.windspeed)
 
-        sow_change = (next_sow - self.boatData.sow)*math.exp(-self.SOW_TIME_CONSTANT*self.CLOCK_INTERVAL)
+        sow_change = (next_sow - self.boatData.sow)*math.exp(-self.SOW_TIME_CONSTANT / self.CLOCK_INTERVAL)
 
         self.boatData.sow += sow_change
 
         if self.boatData.sow > max_sow:
             self.boatData.sow = max_sow
 
-
     def adjust_hog(self):
         # Update HOG from rudder change
         hogChange = (self.boatData.sow * math.sin(self.boatData.rudder * math.pi / 180.0)
-                     / self.L_CENTERBOARD_TO_RUDDER * self.CLOCK_INTERVAL)
+                     / self.L_CENTERBOARD_TO_RUDDER * self.CLOCK_INTERVAL) * self.HOG_CHANGE_FACTOR
 
         self.boatData.hog += hogChange
         self.boatData.hog = standardcalc.bound_to_180(self.boatData.hog)
 
     def update_vectors(self):
         pass
-        # self.boatVector = standardcalc.Vector2D.create_from_angle(self.boatData.hog, self.boatData.sow)
-        #                   # + self.currentFlowVector
-        # # Update COG and SOG
-        # self.boatData.cog = self.boatVector.angle()
-        # self.boatData.sog = self.boatVector.length()
-        #
-        # self.apparentWindVector = self.windVector - self.boatVector
-        #
-        # self.boatData.awa = standardcalc.bound_to_180(
-        #     standardcalc.Vector2D.angle_between(self.boatVector, -self.apparentWindVector))
-        # self.boatData.windspeed = self.apparentWindVector.length()
 
     def update_sailAngles(self):
         # Using 2 right now, but this should be the factor relating tail Angle and angle of attack
@@ -257,12 +237,11 @@ class Simulator():
         gVars.bus.publish("GPS", self.boatData.gps_coord.lat, self.boatData.gps_coord.long,
                           self.boatData.hog, self.boatData.sog, self.boatData.cog)
         gVars.bus.publish("AW", self.boatData.windspeed, self.boatData.awa)
+        gVars.bus.publish("GUI", self.dest_coords.lat, self.dest_coords.long)
 
         if self.verbose:
             # Debug printer
             print "===================="
-            # print header_line
-            # print old_data
             print self.oldBoatDataString
             print self.boatData.__repr__()
 
@@ -277,15 +256,4 @@ class Simulator():
             print self.boatData.__repr__() + ", CFS:" + str(round(self.currentFlowSpeed,2)) + \
                   ", CFA:" + str(round(self.currentFlowAngle,2))
 
-    '''tell the ui that we are starting a new test'''
-    @staticmethod
-    def start_test():
-
-        payload = {'s': 'el2d0s9k3'}
-
-        r = requests.get("http://track.ubctransat.com/api/test/new", params=payload)
-
-        print "========================"
-        print "   Starting New Test    "
-        print "========================"
 

@@ -56,7 +56,7 @@ app.controller('AppCtrl', function($scope, $http) {
 
     // Loop n times. (Eventually make this infinite.)
     var i = 0;
-    var n = 100;
+    var n = 1000;
 
     function f() {
         // Get new data in specified url.
