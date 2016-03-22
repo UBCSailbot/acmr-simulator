@@ -9,7 +9,7 @@ app.controller('AppCtrl', function($scope, $http) {
         $scope.coords = output;
         var latlng = new google.maps.LatLng($scope.coords[0], $scope.coords[1]);
         var mapOptions = {
-            zoom: 16,
+            zoom: 18,
             center: latlng,
             mapTypeId: google.maps.MapTypeId.ROADMAP
         };

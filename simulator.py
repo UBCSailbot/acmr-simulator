@@ -33,6 +33,8 @@ DUMMY_BOAT_INPUTS_FILE = os.path.join(MCU_DIRECTORY,"dummy_boat_inputs.txt")
 class Simulator():
     # maximum wind speed (20 knots; typical is 6 - 12 knots)
     MAX_WIND_SPEED = 10.0
+    # minimum wind speed
+    MIN_WIND_SPEED = 3.0
     # maximum current speed (~1 knot; max current speed in English Bay: 0.75 knots)
     MAX_CURRENT_SPEED = 0.5
     # runtime for the mcu
@@ -56,14 +58,14 @@ class Simulator():
     # Time constant for exponential decay of SOW
     SOW_TIME_CONSTANT = 1.0
     # HOG change constant
-    HOG_CHANGE_FACTOR = 1.5
+    HOG_CHANGE_FACTOR = 2.2
 
     def __init__(self, verbose, reset, gust, data_to_ui):
         random.seed()
 
         # Choose Random Wind Angle between -180 and 180
-        # self.trueWindAngle = random.randint(-180, 180)
-        self.trueWindAngle = 90
+        self.trueWindAngle = random.randint(-180, 180)
+        # self.trueWindAngle = 90
         # Choose random wind speed (between typical values of 6 - 12 knots)
         self.trueWindSpeed = float(random.uniform(5, 6))
 
@@ -73,7 +75,7 @@ class Simulator():
 
         self.currentFlowAngle = random.randint(-180, 180)
         self.currentFlowSpeed = 0.0
-        # self.currentFlowSpeed = float(random.uniform(0.2, 0.4))
+        # self.currentFlowSpeed = float(random.uniform(0.1, 0.3))
         self.currentFlowVector = standardcalc.Vector2D.zero()
 
         self.boatVector = standardcalc.Vector2D.zero()
@@ -130,17 +132,19 @@ class Simulator():
 
     def adjust_true_wind(self):
         # True wind angle is allowed to fluctuate
-        # self.trueWindAngle += random.gauss(0, 1) * self.CLOCK_INTERVAL
+        self.trueWindAngle += random.gauss(0, 1) * self.CLOCK_INTERVAL
         self.trueWindSpeed += random.gauss(0, 0.5) * self.CLOCK_INTERVAL
         if self.trueWindSpeed > self.MAX_WIND_SPEED:
             self.trueWindSpeed = self.MAX_WIND_SPEED
+        if self.trueWindSpeed < self.MIN_WIND_SPEED:
+            self.trueWindSpeed = self.MIN_WIND_SPEED
         self.trueWindAngle = standardcalc.bound_to_180(self.trueWindAngle)
         self.trueWindSpeed = abs(self.trueWindSpeed)
         self.windVector = -standardcalc.Vector2D.create_from_angle(self.trueWindAngle, self.trueWindSpeed)
 
     def adjust_current(self):
         self.currentFlowAngle += random.gauss(0, 0.1) * self.CLOCK_INTERVAL
-        self.currentFlowSpeed += random.gauss(0, 1) * 0.5 * self.CLOCK_INTERVAL
+        self.currentFlowSpeed += random.gauss(0, 0.3) * self.CLOCK_INTERVAL
         self.currentFlowAngle = standardcalc.bound_to_180(self.currentFlowAngle)
         if self.currentFlowSpeed > self.MAX_CURRENT_SPEED:
             self.currentFlowSpeed = self.MAX_CURRENT_SPEED
