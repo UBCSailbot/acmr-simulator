@@ -64,8 +64,8 @@ class Simulator():
         random.seed()
 
         # Choose Random Wind Angle between -180 and 180
-        self.trueWindAngle = random.randint(-180, 180)
-        # self.trueWindAngle = 90
+        # self.trueWindAngle = random.randint(-180, 180)
+        self.trueWindAngle = 90
         # Choose random wind speed (between typical values of 6 - 12 knots)
         self.trueWindSpeed = float(random.uniform(5, 6))
 
@@ -74,8 +74,7 @@ class Simulator():
         self.apparentWindVector = standardcalc.Vector2D.zero()
 
         self.currentFlowAngle = random.randint(-180, 180)
-        self.currentFlowSpeed = 0.0
-        # self.currentFlowSpeed = float(random.uniform(0.1, 0.3))
+        self.currentFlowSpeed = float(random.uniform(0.1, 0.3))
         self.currentFlowVector = standardcalc.Vector2D.zero()
 
         self.boatVector = standardcalc.Vector2D.zero()
@@ -98,7 +97,7 @@ class Simulator():
         self.read_data()
         self.update_old_data()
         self.adjust_true_wind()
-        # self.adjust_current()
+        self.adjust_current()
         if self.gust:
             self.gust_manager()
         self.adjust_aw()
@@ -185,20 +184,8 @@ class Simulator():
     def adjust_sow(self):
         # v_b = w_a*f(phi_aw)*beta where w_a is the apparent wind speed, f(phi_aw) is the norm. BSPD and beta is
         # the control parameter setting (e.g. sheet setting)
-
-        # Use tailAngle to adjust sowChange.
-        # sowChange = (standardcalc.calculate_sog_BSPD(self.boatData.awa,
-        #             self.boatData.windspeed) * abs(self.boatData.tailAngle / self.MAX_TAIL_ANGLE)*0.6) - self.boatData.sow
-
-
-        # self.boatData.sow += ( sowChange / self.SOW_DECAY_FACTOR )*self.CLOCK_INTERVAL
-
-        # next_sow = standardcalc.calculate_sog_BSPD(self.boatData.awa,
-        #                     self.boatData.windspeed) * self.boatData.tailAngle / 100.0
-        next_sow = standardcalc.calculate_sog_BSPD(self.boatData.awa,
-                    self.boatData.windspeed)*0.5
-        # self.boatData.sow = standardcalc.calculate_sog_BSPD(self.boatData.awa,
-        #                     self.boatData.windspeed) * 50.0 / 100.0
+        next_sow = standardcalc.calculate_sog_BSPD(self.boatData.awa, self.boatData.windspeed) \
+                   * abs(self.boatData.tailAngle / self.MAX_TAIL_ANGLE)
         max_sow = standardcalc.calculate_max_sog(self.boatData.awa, self.boatData.windspeed)
 
         sow_change = (next_sow - self.boatData.sow)*math.exp(-self.SOW_TIME_CONSTANT / self.CLOCK_INTERVAL)

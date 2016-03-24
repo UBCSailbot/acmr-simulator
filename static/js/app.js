@@ -6,8 +6,8 @@ app.controller('AppCtrl', function($scope, $http) {
     $http.get('http://127.0.0.1:5000/data').success(function (output) {
 
         // Initialize map options with center at starting point of boat
-        $scope.coords = output;
-        var latlng = new google.maps.LatLng($scope.coords[0], $scope.coords[1]);
+        $scope.data = output;
+        var latlng = new google.maps.LatLng($scope.data[0], $scope.data[1]);
         var mapOptions = {
             zoom: 18,
             center: latlng,
@@ -19,7 +19,7 @@ app.controller('AppCtrl', function($scope, $http) {
 
         // Set coordinates of destination as a flag.
         $scope.marker = new google.maps.Marker({
-            position: {lat: $scope.coords[5], lng: $scope.coords[6]},
+            position: {lat: $scope.data[5], lng: $scope.data[6]},
             map: $scope.map,
             title: 'Destination',
             icon: 'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png'
@@ -59,12 +59,15 @@ app.controller('AppCtrl', function($scope, $http) {
     var n = 1000;
 
     function f() {
+
+
         // Get new data in specified url.
         $http.get('http://127.0.0.1:5000/data').success(function (output) {
-            $scope.coords = output;
-
-            var currentPos = new google.maps.LatLng($scope.coords[0], $scope.coords[1]);
-            var destPos = new google.maps.LatLng($scope.coords[5], $scope.coords[6]);
+            $scope.data = output;
+            $scope.info = 'AWA: ' + $scope.data[9] + ', AWS: ' + $scope.data[9] + ', TWA: ' + $scope.data[9] +
+                            ', TWS: ' + $scope.data[9];
+            var currentPos = new google.maps.LatLng($scope.data[0], $scope.data[1]);
+            var destPos = new google.maps.LatLng($scope.data[5], $scope.data[6]);
             // Add current position LatLng object to array
             boatPathCoords.push(currentPos);
 
@@ -99,19 +102,19 @@ app.controller('AppCtrl', function($scope, $http) {
             //setTimeout( function() { windPath.setMap(null) }, 1000 );
 
             // Calculate True Wind Angle
-            var twa_rad = $scope.coords[2] * Math.PI/180.0;
+            var twa_rad = $scope.data[2] * Math.PI/180.0;
 
             //Create arrow symbol to add to polylines
             var lineSymbol = {
                 path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW
             };
 
-            // Create new polyline path for the True Wind.
+            // Create new polyline path for the Apparent Wind.
             var windPath = new google.maps.Polyline({
-                path: [new google.maps.LatLng($scope.coords[0] + 0.005 * Math.cos(twa_rad),
-                    $scope.coords[1] + 0.005 * Math.sin(twa_rad)),
-                    new google.maps.LatLng($scope.coords[0] + 0.001 * Math.cos(twa_rad),
-                        $scope.coords[1] + 0.001 * Math.sin(twa_rad))],
+                path: [new google.maps.LatLng($scope.data[0] + 0.001 * Math.cos(twa_rad),
+                    $scope.data[1] + 0.001 * Math.sin(twa_rad)),
+                    new google.maps.LatLng($scope.data[0] + 0.0002 * Math.cos(twa_rad),
+                        $scope.data[1] + 0.0002 * Math.sin(twa_rad))],
                 strokeColor: '#FF0000',
                 strokeOpacity: 1.0,
                 strokeWeight: 2,
@@ -138,15 +141,15 @@ app.controller('AppCtrl', function($scope, $http) {
 
             bearingList.push(bearing);
 
-            // TODO: Create polyline for current
-            var currentSpeed = $scope.coords[7];
-            var currentAngle_rad = $scope.coords[8] * Math.PI / 180.0;
+            // Polyline for current
+            var currentSpeed = $scope.data[7];
+            var currentAngle_rad = $scope.data[8] * Math.PI / 180.0;
             var currentPath = new google.maps.Polyline({
-                path: [new google.maps.LatLng($scope.coords[0] + 0.002 * Math.cos(currentAngle_rad),
-                    $scope.coords[1] + 0.002 * Math.sin(currentAngle_rad)),
-                    new google.maps.LatLng($scope.coords[0] + 0.001 * Math.cos(currentAngle_rad),
-                        $scope.coords[1] + 0.001 * Math.sin(currentAngle_rad))],
-                strokeColor: '#FF0000',
+                path: [new google.maps.LatLng($scope.data[0] + 0.001 * Math.cos(currentAngle_rad),
+                    $scope.data[1] + 0.001 * Math.sin(currentAngle_rad)),
+                    new google.maps.LatLng($scope.data[0] + 0.0002 * Math.cos(currentAngle_rad),
+                        $scope.data[1] + 0.0002 * Math.sin(currentAngle_rad))],
+                strokeColor: '#0000FF',
                 strokeOpacity: 1.0,
                 strokeWeight: 2,
                 icons: [{
@@ -159,12 +162,12 @@ app.controller('AppCtrl', function($scope, $http) {
             currentList.push(currentPath);
 
             // Create boat HOG polyline + arrow
-            //var sow = $scope.coords[3];
-            var hog_rad = $scope.coords[4] * Math.PI / 180.0;
+            //var sow = $scope.data[3];
+            var hog_rad = $scope.data[4] * Math.PI / 180.0;
             var boatDir = new google.maps.Polyline({
-                path: [new google.maps.LatLng($scope.coords[0], $scope.coords[1]),
-                       new google.maps.LatLng($scope.coords[0] + 0.0001*Math.cos(hog_rad),
-                                            $scope.coords[1] + 0.0001*Math.sin(hog_rad))],
+                path: [new google.maps.LatLng($scope.data[0], $scope.data[1]),
+                       new google.maps.LatLng($scope.data[0] + 0.0001*Math.cos(hog_rad),
+                                            $scope.data[1] + 0.0001*Math.sin(hog_rad))],
                 strokeColor: '#FF0000',
                 strokeOpacity: 1.0,
                 strokeWeight: 2,
