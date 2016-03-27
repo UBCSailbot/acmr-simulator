@@ -10,6 +10,7 @@ from drivers import interface
 import global_vars as gVars
 import static_vars as sVars
 from datatype import BoatData
+from datatype import ControlData
 from datatype import GPSCoordinate
 
 # This will be the format of the file output
@@ -50,7 +51,7 @@ class Simulator():
     # How likely a gust is to occur every virtual second (Higher => Less probable)
     GUST_PROBABILITY = 100
     # Actual seconds between every time data is sent to the server
-    DATA_DELAY = 0.
+    DATA_DELAY = 0.1
     # This is the centerboard to rudder distance L in metres
     L_CENTERBOARD_TO_RUDDER = 0.2
     # Maximum tail angle
@@ -65,7 +66,7 @@ class Simulator():
 
         # Choose Random Wind Angle between -180 and 180
         # self.trueWindAngle = random.randint(-180, 180)
-        self.trueWindAngle = 90
+        self.trueWindAngle = 0
         # Choose random wind speed (between typical values of 6 - 12 knots)
         self.trueWindSpeed = float(random.uniform(5, 6))
 
@@ -74,7 +75,8 @@ class Simulator():
         self.apparentWindVector = standardcalc.Vector2D.zero()
 
         self.currentFlowAngle = random.randint(-180, 180)
-        self.currentFlowSpeed = float(random.uniform(0.1, 0.3))
+        # self.currentFlowSpeed = float(random.uniform(0.1, 0.3))
+        self.currentFlowSpeed = 0
         self.currentFlowVector = standardcalc.Vector2D.zero()
 
         self.boatVector = standardcalc.Vector2D.zero()
@@ -90,14 +92,20 @@ class Simulator():
 
         self.dest_coords = GPSCoordinate.GPSCoordinate(0, 0)
         self.boatData = BoatData.BoatData()
+        self.boatData.hog = 45
+        self.boatData.sow = 0.1
+        self.controlData = ControlData.ControlData()
         self.oldBoatData = BoatData.BoatData()
         self.oldBoatDataString = ""
+        self.distanceToWaypoint = 0
+        self.acceptDist = 5
+        self.arrivedAtPointFlag = 0
 
     def update(self):
         self.read_data()
         self.update_old_data()
         self.adjust_true_wind()
-        self.adjust_current()
+        # self.adjust_current()
         if self.gust:
             self.gust_manager()
         self.adjust_aw()
@@ -113,12 +121,10 @@ class Simulator():
     def read_data(self):
 
         data = gVars.bus.getData()
+        ctrl_data = gVars.bus.getCtrlData()
 
         self.boatData.rudder = data.rudder
-        # self.boatData.rudder = 20
-        # TODO: Revert once TCU implemented
         tailAngle = data.tailAngle
-        tailAngle = 50
         if tailAngle > self.MAX_TAIL_ANGLE:
             self.boatData.tailAngle = self.MAX_TAIL_ANGLE
         elif tailAngle < -self.MAX_TAIL_ANGLE:
@@ -126,12 +132,17 @@ class Simulator():
         else:
             self.boatData.tailAngle = tailAngle
 
+        self.controlData.steer_scheme = ctrl_data.steer_scheme
+        self.controlData.steer_setpoint = ctrl_data.steer_setpoint
+        self.controlData.prop_scheme = ctrl_data.prop_scheme
+        self.controlData.prop_setpoint = ctrl_data.prop_setpoint
+
     def update_old_data(self):
-        self.oldBoatDataString = self.boatData.__repr__()
+        self.oldBoatDataString = self.boatData.__repr__() + self.controlData.__repr__()
 
     def adjust_true_wind(self):
         # True wind angle is allowed to fluctuate
-        self.trueWindAngle += random.gauss(0, 1) * self.CLOCK_INTERVAL
+        # self.trueWindAngle += random.gauss(0, 1) * self.CLOCK_INTERVAL
         self.trueWindSpeed += random.gauss(0, 0.5) * self.CLOCK_INTERVAL
         if self.trueWindSpeed > self.MAX_WIND_SPEED:
             self.trueWindSpeed = self.MAX_WIND_SPEED
@@ -221,12 +232,18 @@ class Simulator():
             self.boatData.gps_coord.long,
             self.displacementVector
         )
+        self.arrivedAtPointFlag = self.arrivedAtPoint()
+        print str(self.arrivedAtPointFlag)
+
+    def arrivedAtPoint(self):
+        self.distanceToWaypoint = standardcalc.distBetweenTwoCoords(self.boatData.gps_coord, self.dest_coords)
+        return self.distanceToWaypoint < self.acceptDist
 
     def write_data(self):
 
         # Publish GPS and AW data to the bus.
         gVars.bus.publish("GPS", self.boatData.gps_coord.lat, self.boatData.gps_coord.long,
-                          self.boatData.hog, self.boatData.sog, self.boatData.cog)
+                          self.boatData.hog, self.boatData.sog, self.boatData.cog, self.boatData.sow)
         gVars.bus.publish("AW", self.boatData.windspeed, self.boatData.awa)
         gVars.bus.publish("GUI", self.dest_coords.lat, self.dest_coords.long)
 
@@ -245,6 +262,6 @@ class Simulator():
 
         else:
             print self.boatData.__repr__() + ", CFS:" + str(round(self.currentFlowSpeed,2)) + \
-                  ", CFA:" + str(round(self.currentFlowAngle,2))
+                  ", CFA:" + str(round(self.currentFlowAngle,2)) + " " + self.controlData.__repr__()
 
 

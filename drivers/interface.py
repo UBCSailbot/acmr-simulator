@@ -53,6 +53,11 @@ class Interface:
             return self.zmqBus.data
         else:
             pass
+    def getCtrlData(self):
+        if self.busIsVirtual:
+            return self.zmqBus.control_data
+        else:
+            pass
 
     def close(self):
         if self.busIsVirtual:

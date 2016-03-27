@@ -8,6 +8,7 @@ import zmq
 from datatype.BoatData import BoatData
 import threading
 import time
+from datatype.ControlData import ControlData
 
 class ZMQHandler(threading.Thread):
     # in seconds
@@ -25,10 +26,13 @@ class ZMQHandler(threading.Thread):
         # Simulator subscribes to data for Rudder [Angle] (RUD) and Apparent Wind (AW) only.
         self.subsocket.setsockopt(zmq.SUBSCRIBE, "RUD")
         self.subsocket.setsockopt(zmq.SUBSCRIBE, "PROP")
+        self.subsocket.setsockopt(zmq.SUBSCRIBE, "PROP_S")
+        self.subsocket.setsockopt(zmq.SUBSCRIBE, "STEER_S")
 
         self.exitFlag = 0
 
         self.data = BoatData()
+        self.control_data = ControlData()
 
     def run(self):
         while not self.exitFlag:
@@ -66,6 +70,16 @@ class ZMQHandler(threading.Thread):
                     return
                 self.data.windspeed = int(received[1])
                 self.data.awa = int(received[2])
+            elif datatopic == 'PROP_S':
+                if(len(received) != 3):
+                    return
+                self.control_data.prop_scheme = int(received[1])
+                self.control_data.prop_setpoint = float(received[2])
+            elif datatopic == 'STEER_S':
+                if(len(received) != 3):
+                    return
+                self.control_data.steer_scheme = int(received[1])
+                self.control_data.steer_setpoint = float(received[2])
             else:
                 # print "Invalid Topic detected"
                 # print rec_str

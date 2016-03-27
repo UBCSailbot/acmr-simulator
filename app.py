@@ -34,24 +34,45 @@ class simThread(threading.Thread):
         global boatDataStruct
         global TWA, TWS
         global currentVector
+        newP2P_flag = 1
+
         with dataLock:
             sim = simulator.Simulator(gVars.verbose, gVars.reset, gVars.gust, gVars.dataToUI)
-            with open('simulation_data/test2.csv', 'wb') as file:
-                w = csv.writer(file, lineterminator='\n')
-                w.writerow(['Test','blah'])
-                # for i in range(0, 10):
-                #     w.writerow(['test','bla'])
-                # for i in range(0, 10):
-                while not self.exitFlag:
-                    sim.dest_coords.lat = dest.lat
-                    sim.dest_coords.long = dest.long
-                    sim.update()
-                    boatDataStruct = sim.boatData
-                    TWA = sim.trueWindAngle
-                    TWS = sim.trueWindSpeed
-                    currentVector = sim.currentFlowVector
-                    w.writerow(['Test','blab'])
-                    time.sleep(0.25)
+
+            while not self.exitFlag:
+                sim.dest_coords.lat = dest.lat
+                sim.dest_coords.long = dest.long
+                sim.update()
+                boatDataStruct = sim.boatData
+                TWA = sim.trueWindAngle
+                TWS = sim.trueWindSpeed
+                currentVector = sim.currentFlowVector
+                controlData = sim.controlData
+
+                arrivedAtPoint = 0
+
+
+                if (newP2P_flag or (not arrivedAtPoint)):
+
+                    if newP2P_flag:
+                        newFileName = 'simulation_data/Case7.csv'
+
+                    with open(newFileName, 'ab') as file:
+                        w = csv.writer(file, lineterminator='\n', delimiter=',')
+                        if newP2P_flag:
+                            newP2P_flag = 0
+                            w.writerow(['AWA','AWS','HOG','SOG','Current Speed','Current Angle','LAT','LNG','Rudder',
+                                        'Tail Angle','Steer Scheme','Steer Point', 'Bearing', 'Prop Scheme','Prop Point'])
+                        if not arrivedAtPoint:
+                            w.writerow([str(boatDataStruct.awa),str(boatDataStruct.windspeed),str(boatDataStruct.hog),
+                                        str(boatDataStruct.sog),str(currentVector.length()),str(currentVector.angle()),
+                                        str(boatDataStruct.gps_coord.lat),str(boatDataStruct.gps_coord.long),
+                                        str(boatDataStruct.rudder),str(boatDataStruct.tailAngle),
+                                        str(controlData.steer_scheme),str(controlData.steer_setpoint),
+                                        str(standardcalc.angleBetweenTwoCoords(boatDataStruct.gps_coord,dest)),
+                                        str(controlData.prop_scheme),str(controlData.prop_setpoint)])
+
+                time.sleep(0.25)
 
     def close(self):
         self.exitFlag = True
@@ -64,18 +85,20 @@ def run():
     gVars.simulated.add('MC')
     # Start the bus
     gVars.bus = interface.Interface(gVars.simulated)
+
+    # Create the destination
+    # TODO: Make the destination a queue of waypoints
     global dest
-    dest = GPSCoordinate.GPSCoordinate(0,0).createCoordDistAway(50, 25)
+    dest = GPSCoordinate.GPSCoordinate(0,0).createCoordDistAway(0,200)
+
+    # Create and start the simulator thread
     simulatorThread = simThread()
     simulatorThread.start()
-    # Start the simulator thread
-    # runSimThread()
-    # When you kill Flask (SIGTERM), clear the trigger for the next thread
-    # atexit.register(interrupt)
 
     # Run the Flask application
     print "Starting the GUI (Flask application)"
     app.run(threaded=True,use_reloader=False)
+
     print "\n Exit - Keyboard Interrupt"
     gVars.bus.close()
     simulatorThread.close()
@@ -99,7 +122,6 @@ def data():
     tws = TWS
     twa = TWA
     awa_abs = standardcalc.bound_to_180(boatDataStruct.hog + boatDataStruct.awa)
-    # dest = GPSCoordinate.GPSCoordinate(0,0).createCoordDistAway(100,50)
     # Data to be sent in one array.
     coords = [lat, lng, awa_abs, sow, hog, dest.lat, dest.long, currentVector.length(), currentVector.angle(),
               awa, aws, twa, tws]

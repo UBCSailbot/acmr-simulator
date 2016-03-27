@@ -28,3 +28,11 @@ class BoatData:
                                                   numsat=self.num_sat, auto=self.auto,
                                                   rudder=self.rudder, wingAngle=round(self.wingAngle,1),
                                                   tailAngle=self.tailAngle, sow=round(self.sow,3)))
+
+    def __str__(self):
+        return (
+            '{awa},{wspd},{hog},{cog},{sog},{lat},{long},{rudder},{tailAngle},{sow}'.format(awa=round(self.awa,1),
+                                                    wspd=round(self.windspeed,1),hog=round(self.hog,1),
+                                                    cog=round(self.cog,1), sog=round(self.sog,1),
+                                                    lat=self.gps_coord.lat, long=self.gps_coord.long,
+                                                    rudder=self.rudder, tailAngle=self.tailAngle, sow=round(self.sow,3)))

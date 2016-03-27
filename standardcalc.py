@@ -1,5 +1,6 @@
 import random
 import math
+from datatype import GPSCoordinate
 
 EARTH_RADIUS = 6371000
 
@@ -187,6 +188,60 @@ def calculate_max_sog(awa, wind_speed):
 
     return v1 * v2
 
+# Returns the distance in metres
+def distBetweenTwoCoords(coord1, coord2):
+    dLongRad = math.radians(coord1.long - coord2.long)
+    dLatRad = math.radians(coord1.lat - coord2.lat)
+    latRad1 = math.radians(coord1.lat)
+    latRad2 = math.radians(coord2.lat)
+
+    a = math.pow(math.sin(dLatRad / 2), 2) + math.cos(latRad1) * math.cos(latRad2) * math.pow(math.sin(dLongRad / 2), 2)
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return EARTH_RADIUS * c
+
+# Returns the angle in degrees
+def angleBetweenTwoCoords(sourceCoord, destCoord):
+    GPSCoord = GPSCoordinate.GPSCoordinate()
+
+    if (sourceCoord.lat > destCoord.lat):
+        GPSCoord.lat = sourceCoord.lat
+        GPSCoord.long = destCoord.long
+
+    elif (sourceCoord.lat < destCoord.lat):
+        GPSCoord.lat = destCoord.lat
+        GPSCoord.long = sourceCoord.long
+
+    elif (sourceCoord.long < destCoord.long):
+        return 90
+
+    elif (sourceCoord.long > destCoord.long):
+        return -90
+
+    else:
+        return None
+
+    distBtwnCoords = distBetweenTwoCoords(sourceCoord, destCoord)
+    distSin = distBetweenTwoCoords(destCoord, GPSCoord)
+
+    angle = math.asin(distSin / distBtwnCoords) * 180 / math.pi
+
+    if (sourceCoord.lat < destCoord.lat):
+        if (sourceCoord.long < destCoord.long):
+            return angle
+        elif (sourceCoord.long > destCoord.long):
+            angle = -angle
+            return angle
+        else:
+            return 0
+    else:
+        if (sourceCoord.long < destCoord.long):
+            angle = 90 + angle
+            return angle
+        elif (sourceCoord.long > destCoord.long):
+            angle = -90 - angle
+            return angle
+        else:
+            return 180
 
 class Vector2D():
     def __init__(self, x, y):
