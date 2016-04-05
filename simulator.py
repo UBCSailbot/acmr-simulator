@@ -33,11 +33,11 @@ DUMMY_BOAT_INPUTS_FILE = os.path.join(MCU_DIRECTORY,"dummy_boat_inputs.txt")
 
 class Simulator():
     # maximum wind speed (20 knots; typical is 6 - 12 knots)
-    MAX_WIND_SPEED = 10.0
+    MAX_WIND_SPEED = 15.0
     # minimum wind speed
     MIN_WIND_SPEED = 3.0
     # maximum current speed (~1 knot; max current speed in English Bay: 0.75 knots)
-    MAX_CURRENT_SPEED = 0.5
+    MAX_CURRENT_SPEED = 1e9
     # runtime for the mcu
     CLOCK_INTERVAL = 0.25  # was 0.01
     # Time scale for calculations, if equal to clock interval the simulation will run in real time.
@@ -47,7 +47,7 @@ class Simulator():
     # Max rudder angle possible (angle between -45 to 45)
     MAX_RUDDER_ANGLE = 45.0
     # This affects how fast the boat reaches the ideal SOG
-    SOW_DECAY_FACTOR = (3 / CLOCK_INTERVAL)
+    # SOW_DECAY_FACTOR = (3 / CLOCK_INTERVAL)
     # How likely a gust is to occur every virtual second (Higher => Less probable)
     GUST_PROBABILITY = 100
     # Actual seconds between every time data is sent to the server
@@ -59,16 +59,17 @@ class Simulator():
     # Time constant for exponential decay of SOW
     SOW_TIME_CONSTANT = 1.0
     # HOG change constant
-    HOG_CHANGE_FACTOR = 2.2
+    HOG_CHANGE_FACTOR = 7.07
 
     def __init__(self, verbose, reset, gust, data_to_ui):
         random.seed()
 
         # Choose Random Wind Angle between -180 and 180
         # self.trueWindAngle = random.randint(-180, 180)
-        self.trueWindAngle = 0
-        # Choose random wind speed (between typical values of 6 - 12 knots)
-        self.trueWindSpeed = float(random.uniform(5, 6))
+        self.trueWindAngle = 90
+        # Choose random wind speed (between typical values of 6 - 10 m/s)
+        self.trueWindSpeed = float(random.uniform(6, 7))
+        # self.trueWindSpeed = 3.0
 
         self.windVector = standardcalc.Vector2D.zero()
         self.windVector = standardcalc.Vector2D.create_from_angle(self.trueWindAngle, self.trueWindSpeed)
@@ -76,7 +77,7 @@ class Simulator():
 
         self.currentFlowAngle = random.randint(-180, 180)
         # self.currentFlowSpeed = float(random.uniform(0.1, 0.3))
-        self.currentFlowSpeed = 0
+        self.currentFlowSpeed = 0.0
         self.currentFlowVector = standardcalc.Vector2D.zero()
 
         self.boatVector = standardcalc.Vector2D.zero()
@@ -92,8 +93,9 @@ class Simulator():
 
         self.dest_coords = GPSCoordinate.GPSCoordinate(0, 0)
         self.boatData = BoatData.BoatData()
-        self.boatData.hog = 45
-        self.boatData.sow = 0.1
+        self.boatData.hog = 0
+        self.boatData.sow = 1.0
+        # self.boatData.sog = self.boatData.sow
         self.controlData = ControlData.ControlData()
         self.oldBoatData = BoatData.BoatData()
         self.oldBoatDataString = ""
@@ -105,7 +107,7 @@ class Simulator():
         self.read_data()
         self.update_old_data()
         self.adjust_true_wind()
-        # self.adjust_current()
+        self.adjust_current()
         if self.gust:
             self.gust_manager()
         self.adjust_aw()
@@ -142,8 +144,8 @@ class Simulator():
 
     def adjust_true_wind(self):
         # True wind angle is allowed to fluctuate
-        # self.trueWindAngle += random.gauss(0, 1) * self.CLOCK_INTERVAL
-        self.trueWindSpeed += random.gauss(0, 0.5) * self.CLOCK_INTERVAL
+        self.trueWindAngle += random.gauss(0, 1) * self.CLOCK_INTERVAL
+        self.trueWindSpeed += random.gauss(0, 0.3) * self.CLOCK_INTERVAL
         if self.trueWindSpeed > self.MAX_WIND_SPEED:
             self.trueWindSpeed = self.MAX_WIND_SPEED
         if self.trueWindSpeed < self.MIN_WIND_SPEED:
@@ -153,7 +155,7 @@ class Simulator():
         self.windVector = -standardcalc.Vector2D.create_from_angle(self.trueWindAngle, self.trueWindSpeed)
 
     def adjust_current(self):
-        self.currentFlowAngle += random.gauss(0, 0.1) * self.CLOCK_INTERVAL
+        self.currentFlowAngle += random.gauss(0, 1) * self.CLOCK_INTERVAL
         self.currentFlowSpeed += random.gauss(0, 0.3) * self.CLOCK_INTERVAL
         self.currentFlowAngle = standardcalc.bound_to_180(self.currentFlowAngle)
         if self.currentFlowSpeed > self.MAX_CURRENT_SPEED:
@@ -196,7 +198,7 @@ class Simulator():
         # v_b = w_a*f(phi_aw)*beta where w_a is the apparent wind speed, f(phi_aw) is the norm. BSPD and beta is
         # the control parameter setting (e.g. sheet setting)
         next_sow = standardcalc.calculate_sog_BSPD(self.boatData.awa, self.boatData.windspeed) \
-                   * abs(self.boatData.tailAngle / self.MAX_TAIL_ANGLE)
+                   * abs(self.boatData.tailAngle / self.MAX_TAIL_ANGLE) * 0.6
         max_sow = standardcalc.calculate_max_sog(self.boatData.awa, self.boatData.windspeed)
 
         sow_change = (next_sow - self.boatData.sow)*math.exp(-self.SOW_TIME_CONSTANT / self.CLOCK_INTERVAL)
@@ -209,7 +211,7 @@ class Simulator():
     def adjust_hog(self):
         # Update HOG from rudder change
         hogChange = (self.boatData.sow * math.sin(self.boatData.rudder * math.pi / 180.0)
-                     / self.L_CENTERBOARD_TO_RUDDER * self.CLOCK_INTERVAL) * self.HOG_CHANGE_FACTOR
+                      * self.CLOCK_INTERVAL) * self.HOG_CHANGE_FACTOR
 
         self.boatData.hog += hogChange
         self.boatData.hog = standardcalc.bound_to_180(self.boatData.hog)
@@ -233,7 +235,7 @@ class Simulator():
             self.displacementVector
         )
         self.arrivedAtPointFlag = self.arrivedAtPoint()
-        print str(self.arrivedAtPointFlag)
+        # print str(self.arrivedAtPointFlag)
 
     def arrivedAtPoint(self):
         self.distanceToWaypoint = standardcalc.distBetweenTwoCoords(self.boatData.gps_coord, self.dest_coords)

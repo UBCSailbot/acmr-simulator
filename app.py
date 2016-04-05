@@ -55,16 +55,17 @@ class simThread(threading.Thread):
                 if (newP2P_flag or (not arrivedAtPoint)):
 
                     if newP2P_flag:
-                        newFileName = 'simulation_data/Case7.csv'
+                        newFileName = 'simulation_data/cur_speedtest3.csv'
 
                     with open(newFileName, 'ab') as file:
                         w = csv.writer(file, lineterminator='\n', delimiter=',')
                         if newP2P_flag:
                             newP2P_flag = 0
-                            w.writerow(['AWA','AWS','HOG','SOG','Current Speed','Current Angle','LAT','LNG','Rudder',
+                            w.writerow(['AWA','AWS','HOG','COG','SOG','Current Speed','Current Angle','LAT','LNG','Rudder',
                                         'Tail Angle','Steer Scheme','Steer Point', 'Bearing', 'Prop Scheme','Prop Point'])
                         if not arrivedAtPoint:
                             w.writerow([str(boatDataStruct.awa),str(boatDataStruct.windspeed),str(boatDataStruct.hog),
+                                        str(boatDataStruct.cog),
                                         str(boatDataStruct.sog),str(currentVector.length()),str(currentVector.angle()),
                                         str(boatDataStruct.gps_coord.lat),str(boatDataStruct.gps_coord.long),
                                         str(boatDataStruct.rudder),str(boatDataStruct.tailAngle),
@@ -89,7 +90,7 @@ def run():
     # Create the destination
     # TODO: Make the destination a queue of waypoints
     global dest
-    dest = GPSCoordinate.GPSCoordinate(0,0).createCoordDistAway(0,200)
+    dest = GPSCoordinate.GPSCoordinate(0,0).createCoordDistAway(100,50)
 
     # Create and start the simulator thread
     simulatorThread = simThread()

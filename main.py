@@ -27,7 +27,7 @@ def run():
     print "Starting the Simulator"
 
     hardware = simulator.Simulator(gVars.verbose, gVars.reset, gVars.gust, gVars.dataToUI)
-    gVars.boatVars = BoatData.BoatData();
+    gVars.boatVars = BoatData.BoatData()
 
     while 1:
         hardware.update()
